@@ -1,0 +1,196 @@
+Running Gradle task 'assembleDebug'...                          
+flutter : C:\Users\mdf
+ay\AppData\Local\Pub\C
+ache\hosted\pub.dev\im
+age_picker_android-0.8
+.13+15\android\src\mai
+n\java\io\flutter\plug
+ins\imagepicker\ImageP
+ickerPlugin.java:19: 
+error: cannot find 
+symbol
+At line:1 char:1
++ flutter build apk 
+--debug 2>&1 | 
+ForEach-Object { $_ } 
+| Out-File -Fi ...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~
+    + CategoryInfo    
+          : 
+NotSpecified: (C    
+:\Users\mdfay\...not  
+   find 
+symbol:String) [    
+], RemoteException
+    + 
+FullyQualifiedError   
+ Id : 
+NativeCommandErr    or
+ 
+import io.flutter.embe
+dding.engine.plugins.l
+ifecycle.FlutterLifecy
+cleAdapter;
+                      
+                      
+        ^
+  symbol:   class Flut
+terLifecycleAdapter
+  location: package io
+.flutter.embedding.eng
+ine.plugins.lifecycle
+C:\Users\mdfay\AppData
+\Local\Pub\Cache\hoste
+d\pub.dev\image_picker
+_android-0.8.13+15\and
+roid\src\main\java\io\
+flutter\plugins\imagep
+icker\ImagePickerPlugi
+n.java:132: error: 
+cannot find symbol
+      lifecycle = Flut
+terLifecycleAdapter.ge
+tActivityLifecycle(act
+ivityBinding);
+                  ^
+  symbol:   variable F
+lutterLifecycleAdapter
+  location: class Imag
+ePickerPlugin.Activity
+State
+2 errors
+e: file:///C:/Users/md
+fay/AppData/Local/Pub/
+Cache/hosted/pub.dev/f
+ile_picker-10.3.10/and
+roid/src/main/kotlin/c
+om/mr/flutter/plugin/f
+ilepicker/FilePickerPl
+ugin.kt:18:54 
+Unresolved reference '
+FlutterLifecycleAdapte
+r'.
+e: file:///C:/Users/md
+fay/AppData/Local/Pub/
+Cache/hosted/pub.dev/f
+ile_picker-10.3.10/and
+roid/src/main/kotlin/c
+om/mr/flutter/plugin/f
+ilepicker/FilePickerPl
+ugin.kt:204:30 
+Unresolved reference '
+FlutterLifecycleAdapte
+r'.
+
+FAILURE: Build 
+completed with 2 
+failures.
+
+1: Task failed with 
+an exception.
+-----------
+* What went wrong:
+Execution failed for 
+task ':image_picker_an
+droid:compileDebugJava
+WithJavac'.
+> Compilation failed; 
+see the compiler 
+output below.
+  C:\Users\mdfay\AppDa
+ta\Local\Pub\Cache\hos
+ted\pub.dev\image_pick
+er_android-0.8.13+15\a
+ndroid\src\main\java\i
+o\flutter\plugins\imag
+epicker\ImagePickerPlu
+gin.java:19: error: 
+cannot find symbol
+  import io.flutter.em
+bedding.engine.plugins
+.lifecycle.FlutterLife
+cycleAdapter;
+                      
+                      
+          ^
+    symbol:   class Fl
+utterLifecycleAdapter
+    location: package 
+io.flutter.embedding.e
+ngine.plugins.lifecycl
+e
+  C:\Users\mdfay\AppDa
+ta\Local\Pub\Cache\hos
+ted\pub.dev\image_pick
+er_android-0.8.13+15\a
+ndroid\src\main\java\i
+o\flutter\plugins\imag
+epicker\ImagePickerPlu
+gin.java:132: error: 
+cannot find symbol
+        lifecycle = Fl
+utterLifecycleAdapter.
+getActivityLifecycle(a
+ctivityBinding);
+                    ^
+    symbol:   
+variable FlutterLifecy
+cleAdapter
+    location: class Im
+agePickerPlugin.Activi
+tyState
+  2 errors
+
+* Try:
+> Check your code and 
+dependencies to fix 
+the compilation 
+error(s)
+> Run with --scan to 
+get full insights.
+======================
+======================
+======================
+============
+
+2: Task failed with 
+an exception.
+-----------
+* What went wrong:
+Execution failed for 
+task ':file_picker:com
+pileDebugKotlin'.
+> A failure occurred 
+while executing org.je
+tbrains.kotlin.compile
+rRunner.GradleCompiler
+RunnerWithWorkers$Grad
+leKotlinCompilerWorkAc
+tion
+   > Compilation 
+error. See log for 
+more details
+
+* Try:
+> Run with 
+--stacktrace option 
+to get the stack 
+trace.
+> Run with --info or 
+--debug option to get 
+more log output.
+> Run with --scan to 
+get full insights.
+> Get more help at htt
+ps://help.gradle.org.
+======================
+======================
+======================
+============
+
+BUILD FAILED in 28s
+Running Gradle task 'assembleDebug'...                             28.5s
+Gradle task 
+assembleDebug failed 
+with exit code 1

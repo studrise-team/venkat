@@ -20,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen>
   String? _error;
 
   // Tab 0 = Aspirant, Tab 1 = Student
+  // Parents can use EITHER tab – the auth service reads their role and routes them
 
   @override
   void initState() {
@@ -43,21 +44,34 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() => _error = 'Please fill in all fields.');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final user = await AuthService().loginUser(
         username: username,
         password: password,
       );
       if (!mounted) return;
-      if (user.role == 'aspirant') {
-        Navigator.pushReplacementNamed(context, '/aspirant-dashboard');
-      } else {
-        Navigator.pushReplacementNamed(context, '/login');
+      switch (user.role) {
+        case 'aspirant':
+          Navigator.pushReplacementNamed(context, '/aspirant-dashboard');
+          break;
+        case 'student':
+          Navigator.pushReplacementNamed(context, '/student-dashboard');
+          break;
+        case 'parent':
+          Navigator.pushReplacementNamed(context, '/parent-dashboard');
+          break;
+        default:
+          Navigator.pushReplacementNamed(context, '/login');
       }
     } on Exception catch (e) {
       String msg = e.toString().replaceAll('Exception: ', '');
-      if (msg.contains('invalid-credential') || msg.contains('user-not-found') || msg.contains('wrong-password')) {
+      if (msg.contains('invalid-credential') ||
+          msg.contains('user-not-found') ||
+          msg.contains('wrong-password')) {
         msg = 'Invalid username or password.';
       }
       setState(() => _error = msg);
@@ -83,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen>
         child: SafeArea(
           child: Column(
             children: [
-              // ── Top bar ─────────────────────────────────────────────────
+              // ── Top bar ──────────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 20, 16, 0),
                 child: Row(
@@ -98,14 +112,13 @@ class _LoginScreenState extends State<LoginScreen>
                               fontSize: 26,
                               fontWeight: FontWeight.w800,
                             )),
-                        Text('Your exam success partner',
+                        Text('Your success partner',
                             style: GoogleFonts.outfit(
                               color: AppColors.textSecondary,
                               fontSize: 13,
                             )),
                       ],
                     ),
-                    // Admin Login button
                     GestureDetector(
                       onTap: _showAdminLogin,
                       child: Container(
@@ -133,25 +146,26 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
-              const SizedBox(height: 36),
+              const SizedBox(height: 28),
 
-              // ── Logo ────────────────────────────────────────────────────
+              // ── Logo ─────────────────────────────────────────────────────
               SizedBox(
-                height: 110,
+                height: 100,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(50),
                   child: Image.asset('assets/logo.png', fit: BoxFit.contain),
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 22),
 
-              // ── Tab bar ─────────────────────────────────────────────────
+              // ── Tab bar ──────────────────────────────────────────────────
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 24),
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: AppColors.card,
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.cardBorder),
                 ),
                 child: TabBar(
                   controller: _tabController,
@@ -161,10 +175,9 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   indicatorSize: TabBarIndicatorSize.tab,
                   dividerColor: Colors.transparent,
-                  labelStyle: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w600, fontSize: 14),
-                  unselectedLabelStyle:
-                      GoogleFonts.outfit(fontSize: 14),
+                  labelStyle:
+                      GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14),
+                  unselectedLabelStyle: GoogleFonts.outfit(fontSize: 14),
                   labelColor: Colors.white,
                   unselectedLabelColor: AppColors.textSecondary,
                   tabs: const [
@@ -174,9 +187,25 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
-              const SizedBox(height: 28),
+              // ── Parent hint ───────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.family_restroom_rounded,
+                        size: 14, color: AppColors.accent),
+                    const SizedBox(width: 6),
+                    Text('Parents: use the Student tab to login',
+                        style: GoogleFonts.outfit(
+                            fontSize: 12, color: AppColors.accent)),
+                  ],
+                ),
+              ),
 
-              // ── Form ────────────────────────────────────────────────────
+              const SizedBox(height: 20),
+
+              // ── Form ─────────────────────────────────────────────────────
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -184,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen>
                     children: [
                       _InputField(
                         controller: _usernameCtrl,
-                        label: 'Username',
+                        label: 'Username / Email',
                         icon: Icons.person_rounded,
                         onChanged: (_) => setState(() => _error = null),
                       ),

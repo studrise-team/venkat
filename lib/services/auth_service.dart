@@ -23,6 +23,8 @@ class AuthService {
     required String username,
     required String password,
     required String role,
+    String? email,
+    String? phone,
   }) async {
     // Check username uniqueness
     final existing = await _db
@@ -35,7 +37,7 @@ class AuthService {
     }
 
     final cred = await _auth.createUserWithEmailAndPassword(
-      email: _toEmail(username),
+      email: email?.isNotEmpty == true ? email! : _toEmail(username),
       password: password,
     );
     final uid = cred.user!.uid;
@@ -44,6 +46,8 @@ class AuthService {
       name: name.trim(),
       username: username.trim().toLowerCase(),
       role: role,
+      email: email?.trim(),
+      phone: phone?.trim(),
     );
     await _db.collection('users').doc(uid).set(user.toMap());
     return user;
@@ -55,8 +59,16 @@ class AuthService {
     required String username,
     required String password,
   }) async {
+    // Support login with email or username
+    String loginEmail;
+    if (username.contains('@')) {
+      loginEmail = username.trim().toLowerCase();
+    } else {
+      loginEmail = _toEmail(username);
+    }
+
     final cred = await _auth.signInWithEmailAndPassword(
-      email: _toEmail(username),
+      email: loginEmail,
       password: password,
     );
     final uid = cred.user!.uid;
@@ -90,24 +102,37 @@ class AuthService {
     return snap.docs.isEmpty;
   }
 
+  // ── Super Admins (Emails that always get admin access) ──────────────────────
+  static const _superAdmins = [
+    'fayaz@gmail.com', 'mdfayaz@gmail.com', 'fayazzz@astar.app', 'admin@astar.app', 'shanmukhasrinulanka@gmail.com'
+  ];
+
+  bool _isSuperAdmin(String? email) {
+    if (email == null) return false;
+    final e = email.trim().toLowerCase();
+    return _superAdmins.contains(e) || e.startsWith('admin@');
+  }
+
   // ── Get Current User Profile ──────────────────────────────────────────────
 
   Future<UserModel?> getCurrentUserProfile() async {
     final uid = currentUser?.uid;
     if (uid == null) return null;
 
-    // Admin check — any email not ending in @astar.app is treated as an Admin
-    final email = currentUser!.email ?? '';
-    if (!email.endsWith('@astar.app')) {
-      return UserModel(
-          uid: uid,
-          name: 'Admin',
-          username: email.split('@').first,
-          role: 'admin');
-    }
-
     final doc = await _db.collection('users').doc(uid).get();
-    if (!doc.exists) return null;
-    return UserModel.fromMap(uid, doc.data()!);
+    final userEmail = currentUser!.email;
+
+    if (!doc.exists) {
+      if (_isSuperAdmin(userEmail)) {
+         return UserModel(uid: uid, name: 'Admin', username: userEmail?.split('@').first ?? 'admin', role: 'admin', email: userEmail);
+      }
+      return null;
+    }
+    
+    final user = UserModel.fromMap(uid, doc.data()!);
+    if (_isSuperAdmin(userEmail) || user.role == 'admin' || user.username == 'fayazzz') {
+       return UserModel(uid: uid, name: user.name, username: user.username, role: 'admin', email: userEmail, phone: user.phone);
+    }
+    return user;
   }
 }

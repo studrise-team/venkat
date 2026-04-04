@@ -103,15 +103,35 @@ class FirebaseService {
 
   // ── Student: Save Quiz Result ──────────────────────────────────────────────
 
-  Future<void> saveQuizResult(String quizId, ResultModel result) async {
+  Future<void> saveQuizResult(String quizId, ResultModel result, {String quizTitle = 'Quiz'}) async {
     final uid = currentUser?.uid;
     if (uid == null) return;
+    
+    // Save to centralized collection for dashboards (Student & Parent)
+    await _firestore.collection('student_quiz_results').add({
+      'studentId': uid,
+      'quizId': quizId,
+      'quizTitle': quizTitle,
+      'score': result.correctAnswers,
+      'total': result.totalQuestions,
+      'percentage': result.percentage,
+      'submittedAt': FieldValue.serverTimestamp(),
+    });
+
+    // XP Logic: 10 XP per correct answer
+    final xpGained = result.correctAnswers * 10;
+    await _firestore.collection('users').doc(uid).update({
+      'xp': FieldValue.increment(xpGained),
+    });
+
+    // Also keep the individual user's sub-collection
     await _firestore
         .collection('users')
         .doc(uid)
         .collection('results')
         .add({
       'quizId': quizId,
+      'quizTitle': quizTitle,
       'totalQuestions': result.totalQuestions,
       'correctAnswers': result.correctAnswers,
       'percentage': result.percentage,
@@ -155,6 +175,47 @@ class FirebaseService {
     });
   }
 
+  // ── Fees ──────────────────────────────────────────────────────────────────
+
+  Future<void> addFee(Map<String, dynamic> data) async {
+    await _firestore.collection('fees').add({
+      ...data,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateFee(String feeId, Map<String, dynamic> data) async {
+    await _firestore.collection('fees').doc(feeId).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getFeesStream() {
+    return _firestore.collection('fees').snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getStudentFeesStream(String studentId) {
+    return _firestore.collection('fees').where('studentId', isEqualTo: studentId).snapshots();
+  }
+
+  // ── Materials ─────────────────────────────────────────────────────────────
+
+  Future<void> addMaterial(Map<String, dynamic> data) async {
+    await _firestore.collection('materials').add({
+      ...data,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteMaterial(String materialId) async {
+    await _firestore.collection('materials').doc(materialId).delete();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getMaterialsStream() {
+    return _firestore.collection('materials').orderBy('createdAt', descending: true).snapshots();
+  }
+
   // ── Stats ──────────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getStats() async {
@@ -163,9 +224,14 @@ class FirebaseService {
     for (final doc in snaps.docs) {
       totalQuestions += (doc.data()['questionCount'] as int? ?? 0);
     }
+    
+    // Students Count
+    final studentSnaps = await _firestore.collection('users').where('role', isEqualTo: 'student').get();
+    
     return {
       'quizCount': snaps.docs.length,
       'totalQuestions': totalQuestions,
+      'studentCount': studentSnaps.docs.length,
       'avgScore': 0.0,
     };
   }

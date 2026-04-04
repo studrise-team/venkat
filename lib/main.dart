@@ -17,10 +17,18 @@ import 'auth/register_screen.dart';
 // Admin
 import 'admin/admin_dashboard.dart';
 import 'admin/exam_management.dart';
+import 'admin/student_admin_dashboard.dart';
 
 // Aspirant
 import 'aspirant/aspirant_dashboard.dart';
 import 'aspirant/exam_action_screen.dart';
+
+// Student
+import 'student/student_dashboard.dart';
+import 'student/tabs/certificates_tab.dart';
+
+// Parent
+import 'parent/parent_dashboard.dart';
 
 // Upload (shared admin flow)
 import 'screens/upload_screen.dart';
@@ -71,9 +79,21 @@ class AstarApp extends StatelessWidget {
           // Admin
           '/admin-dashboard': (context) => const AdminDashboard(),
           '/exam-management': (context) => const ExamManagementScreen(),
+          '/student-admin': (context) => const StudentAdminDashboard(),
 
           // Aspirant
           '/aspirant-dashboard': (context) => const AspirantDashboard(),
+
+          // Student
+          '/student-dashboard': (context) => const StudentDashboard(),
+          '/certificates': (context) => Scaffold(
+            appBar: AppBar(title: const Text('My Certificates'), backgroundColor: Colors.transparent, centerTitle: true, elevation: 0),
+            extendBodyBehindAppBar: true,
+            body: const CertificatesTab()
+          ),
+
+          // Parent
+          '/parent-dashboard': (context) => const ParentDashboard(),
 
           // Shared quiz flow (admin uploads, aspirant takes)
           '/upload': (context) => const UploadScreen(),

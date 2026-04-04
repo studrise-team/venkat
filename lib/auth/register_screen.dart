@@ -12,6 +12,8 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
@@ -30,6 +32,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
     _usernameCtrl.dispose();
     _passCtrl.dispose();
     _confirmCtrl.dispose();
@@ -85,6 +89,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         username: username,
         password: pass,
         role: _role,
+        email: _emailCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim(),
       );
       if (!mounted) return;
       if (user.role == 'aspirant') {
@@ -153,6 +159,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _nameCtrl,
                         hint: 'Enter your full name',
                         icon: Icons.badge_rounded,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Email
+                      _buildLabel('Email Address (Optional)'),
+                      const SizedBox(height: 8),
+                      _buildField(
+                        controller: _emailCtrl,
+                        hint: 'Enter your email',
+                        icon: Icons.email_rounded,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Phone
+                      _buildLabel('Phone Number'),
+                      const SizedBox(height: 8),
+                      _buildField(
+                        controller: _phoneCtrl,
+                        hint: 'Enter your contact number',
+                        icon: Icons.phone_rounded,
+                        keyboardType: TextInputType.phone,
                       ),
                       const SizedBox(height: 16),
 
@@ -287,6 +315,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             gradient: AppColors.accentGradient,
                             onTap: () => setState(() => _role = 'student'),
                           ),
+                          const SizedBox(width: 12),
+                          _RoleChip(
+                            label: 'Parent',
+                            icon: Icons.family_restroom_rounded,
+                            selected: _role == 'parent',
+                            gradient: const LinearGradient(colors: [Color(0xFFF43F5E), Color(0xFFBE123C)]),
+                            onTap: () => setState(() => _role = 'parent'),
+                          ),
                         ],
                       ),
 
@@ -389,10 +425,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required IconData icon,
     bool obscure = false,
     Widget? suffixIcon,
+    TextInputType? keyboardType,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
+      keyboardType: keyboardType,
       style: GoogleFonts.outfit(color: AppColors.textPrimary),
       decoration: InputDecoration(
         hintText: hint,

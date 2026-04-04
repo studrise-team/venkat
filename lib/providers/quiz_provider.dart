@@ -122,12 +122,16 @@ class QuizProvider extends ChangeNotifier {
   // Student: Load questions from Firestore
   // ─────────────────────────────────────────────────────────────────────────
 
-  Future<void> loadQuestionsFromFirestore(String quizId, String quizTitle) async {
+  String _currentQuizTitle = '';
+  String get currentQuizTitle => _currentQuizTitle;
+
+  Future<void> loadQuestionsFromFirestore(String quizId, String quizTitle, {String collection = 'quizzes'}) async {
     _state = QuizState.loading;
     _errorMessage = '';
+    _currentQuizTitle = quizTitle;
     notifyListeners();
     try {
-      final qs = await FirebaseService().fetchQuizQuestions(quizId);
+      final qs = await FirebaseService().fetchQuizQuestions(quizId, collection: collection);
       if (qs.isEmpty) throw Exception('This quiz has no questions yet.');
       _questions = qs;
       _currentQuizId = quizId;
@@ -193,10 +197,10 @@ class QuizProvider extends ChangeNotifier {
     _state = QuizState.finished;
     notifyListeners();
 
-    // Save result to Firestore (fire and forget)
+    // Save result to Firestore
     if (_currentQuizId.isNotEmpty) {
       FirebaseService()
-          .saveQuizResult(_currentQuizId, _result!)
+          .saveQuizResult(_currentQuizId, _result!, quizTitle: _currentQuizTitle)
           .catchError((e) => debugPrint('Failed to save result: $e'));
     }
   }

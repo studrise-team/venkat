@@ -93,6 +93,53 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
+  // ---- AI Prompt Generation ----
+  Future<void> _generateFromPrompt() async {
+    final ctrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Generate Quiz by AI', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter a topic or simple prompt (e.g. "Physics 10th grade motion chapter")',
+              style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textSecondary)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              maxLines: 3,
+              autofocus: true,
+              style: GoogleFonts.outfit(fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Type your prompt here...',
+                filled: true,
+                fillColor: AppColors.cardLight,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            child: const Text('Generate'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok == true && ctrl.text.trim().isNotEmpty) {
+      if (!mounted) return;
+      context.read<QuizProvider>().setExtractedText(ctrl.text.trim());
+      Navigator.pushNamed(context, '/extracted');
+    }
+  }
+
 
 
   @override
@@ -160,6 +207,17 @@ class _UploadScreenState extends State<UploadScreen> {
                   ),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // AI Prompt Button
+            _UploadButton(
+              icon: Icons.auto_awesome_rounded,
+              label: 'Generate Quiz by AI Prompt',
+              color: AppColors.primaryGradient.colors.first,
+              onTap: _generateFromPrompt,
+              isWide: true,
             ),
 
             const SizedBox(height: 28),
@@ -299,15 +357,21 @@ class _UploadButton extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
+  final bool isWide;
 
-  const _UploadButton(
-      {required this.icon,
-      required this.label,
-      required this.color,
-      required this.onTap});
+  const _UploadButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.isWide = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (isWide) {
+      return _WideButton(icon: icon, label: label, color: color, onTap: onTap);
+    }
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -325,6 +389,42 @@ class _UploadButton extends StatelessWidget {
               label,
               style:
                   GoogleFonts.outfit(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WideButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _WideButton({required this.icon, required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: GoogleFonts.outfit(color: color, fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ],
         ),

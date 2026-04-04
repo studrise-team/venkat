@@ -1,0 +1,76 @@
+Running Gradle task 'assembleRelease'...                        
+flutter : lib/admin/admin_
+dashboard.dart:213:23: 
+Error: Member not found: 
+'easeInOutRevolute'.
+At line:1 char:1
++ flutter build apk 2>&1 
+> build_output.txt ; 
+Get-Content build_output. 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified    : 
+(lib/admin/admin.    
+..InOutRevolute'.:S    
+tring) [], RemoteEx    
+ception
+    + FullyQualifiedErr   
+ orId : NativeComman    
+dError
+ 
+        curve: 
+Curves.easeInOutRevolute,
+                      
+^^^^^^^^^^^^^^^^^
+lib/admin/student_admin_da
+shboard.dart:418:23: 
+Error: Member not found: 
+'easeInOutRevolute'.
+        curve: 
+Curves.easeInOutRevolute,
+                      
+^^^^^^^^^^^^^^^^^
+lib/student/student_dashbo
+ard.dart:592:23: Error: 
+Member not found: 
+'easeInOutRevolute'.
+        curve: 
+Curves.easeInOutRevolute,
+                      
+^^^^^^^^^^^^^^^^^
+Target 
+kernel_snapshot_program 
+failed: Exception
+
+
+FAILURE: Build failed 
+with an exception.
+
+* What went wrong:
+Execution failed for task 
+':app:compileFlutterBuildR
+elease'.
+> Process 'command 'C:\flu
+tter\bin\flutter.bat'' 
+finished with non-zero 
+exit value 1
+
+* Try:
+> Run with --stacktrace 
+option to get the stack 
+trace.
+> Run with --info or 
+--debug option to get 
+more log output.
+> Run with --scan to get 
+full insights.
+> Get more help at 
+https://help.gradle.org.
+
+BUILD FAILED in 54s
+Running Gradle task 'assembleRelease'...                           55.1s
+Gradle task 
+assembleRelease failed 
+with exit code 1

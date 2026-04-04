@@ -70,6 +70,10 @@ class _SplashScreenState extends State<SplashScreen>
       Navigator.pushReplacementNamed(context, '/admin-dashboard');
     } else if (profile.role == 'aspirant') {
       Navigator.pushReplacementNamed(context, '/aspirant-dashboard');
+    } else if (profile.role == 'student') {
+      Navigator.pushReplacementNamed(context, '/student-dashboard');
+    } else if (profile.role == 'parent') {
+      Navigator.pushReplacementNamed(context, '/parent-dashboard');
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }

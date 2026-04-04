@@ -26,7 +26,7 @@ class OptionTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.15)
+              ? AppColors.primary.withOpacity(0.15)
               : AppColors.card,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
