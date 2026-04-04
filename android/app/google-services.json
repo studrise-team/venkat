@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "716584583860",
+    "project_id": "astarai",
+    "storage_bucket": "astarai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:716584583860:android:b58b4901b17f2b325e0de1",
+        "android_client_info": {
+          "package_name": "com.example.astarai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQz8omQ-fAbczuIVnpZmSB0iD8GHMSQ2w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
