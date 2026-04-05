@@ -19,8 +19,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _loading = false;
   String? _error;
 
-  // Tab 0 = Aspirant, Tab 1 = Student
-  // Parents can use EITHER tab – the auth service reads their role and routes them
+  // Tabs: 0 = Aspirant, 1 = Student
 
   @override
   void initState() {
@@ -60,9 +59,6 @@ class _LoginScreenState extends State<LoginScreen>
           break;
         case 'student':
           Navigator.pushReplacementNamed(context, '/student-dashboard');
-          break;
-        case 'parent':
-          Navigator.pushReplacementNamed(context, '/parent-dashboard');
           break;
         default:
           Navigator.pushReplacementNamed(context, '/login');
@@ -187,21 +183,6 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
-              // ── Parent hint ───────────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.family_restroom_rounded,
-                        size: 14, color: AppColors.accent),
-                    const SizedBox(width: 6),
-                    Text('Parents: use the Student tab to login',
-                        style: GoogleFonts.outfit(
-                            fontSize: 12, color: AppColors.accent)),
-                  ],
-                ),
-              ),
 
               const SizedBox(height: 20),
 

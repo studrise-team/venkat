@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../app_theme.dart';
+import '../../services/cloudinary_service.dart';
+import '../../widgets/image_viewer.dart';
 
 class CertificatesTab extends StatefulWidget {
   const CertificatesTab({super.key});
@@ -27,7 +28,6 @@ class _CertificatesTabState extends State<CertificatesTab> {
     }
   }
 
-  // Simulated add certificate dialog (admin would normally assign them)
   void _showAddDialog() {
     final titleCtrl = TextEditingController();
     final issuerCtrl = TextEditingController();
@@ -50,95 +50,95 @@ class _CertificatesTabState extends State<CertificatesTab> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Upload Certificate',
-                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 16),
+                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Upload New Achievement', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700)),
+                      IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
                   
-                  // Image Picker
                   GestureDetector(
                     onTap: () => _pickImage(modalState),
                     child: Container(
-                      height: 140,
+                      height: 160,
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: AppColors.cardLight,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.cardBorder, style: BorderStyle.solid),
+                        color: AppColors.primary.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
                       ),
                       child: _image != null 
-                        ? ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.file(File(_image!.path), fit: BoxFit.cover))
+                        ? ClipRRect(borderRadius: BorderRadius.circular(20), child: Image.file(File(_image!.path), fit: BoxFit.cover))
                         : Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.add_a_photo_rounded, color: AppColors.primary, size: 32),
-                              const SizedBox(height: 8),
-                              Text('Tap to pick certificate image', style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textSecondary)),
+                              const Icon(Icons.add_photo_alternate_rounded, color: AppColors.primary, size: 40),
+                              const SizedBox(height: 12),
+                              Text('Tap to select certificate image', style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textSecondary)),
                             ],
                           ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   
                   _sheet_field(titleCtrl, 'Certificate Title', Icons.workspace_premium_rounded),
                   const SizedBox(height: 12),
                   _sheet_field(issuerCtrl, 'Issued By', Icons.business_rounded),
                   const SizedBox(height: 12),
-                  _sheet_field(dateCtrl, 'Date', Icons.calendar_today_rounded),
+                  _sheet_field(dateCtrl, 'Date of Achievement', Icons.calendar_today_rounded),
                   const SizedBox(height: 24),
                   
-                  _isUploading 
-                    ? const Center(child: CircularProgressIndicator())
-                    : GestureDetector(
-                        onTap: () async {
-                          if (titleCtrl.text.isEmpty) return;
-                          
-                          modalState(() => _isUploading = true);
-                          String imageUrl = '';
-                          
-                          try {
-                            if (_image != null) {
-                              final ref = FirebaseStorage.instance
-                                  .ref()
-                                  .child('certificates')
-                                  .child(_uid)
-                                  .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
-                              await ref.putFile(File(_image!.path));
-                              imageUrl = await ref.getDownloadURL();
-                            }
-
-                            await FirebaseFirestore.instance
-                                .collection('certificates')
-                                .doc(_uid)
-                                .collection('items')
-                                .add({
-                              'title': titleCtrl.text.trim(),
-                              'issuer': issuerCtrl.text.trim(),
-                              'date': dateCtrl.text.trim(),
-                              'imageUrl': imageUrl,
-                              'addedAt': FieldValue.serverTimestamp(),
-                            });
-                            
-                            if (context.mounted) Navigator.pop(context);
-                          } catch (e) {
-                            debugPrint('Upload error: $e');
-                          } finally {
-                            modalState(() => _isUploading = false);
-                            _image = null; 
-                          }
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          decoration: BoxDecoration(
-                            gradient: AppColors.primaryGradient,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text('Save & Upload',
-                              style: GoogleFonts.outfit(
-                                  color: Colors.white, fontWeight: FontWeight.w700)),
-                        ),
+                  GestureDetector(
+                    onTap: _isUploading ? null : () async {
+                      if (titleCtrl.text.isEmpty || _image == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please provide title and image')));
+                        return;
+                      }
+                      
+                      modalState(() => _isUploading = true);
+                      
+                      try {
+                        final imageUrl = await CloudinaryService().uploadFile(File(_image!.path), folder: 'certificates');
+                        
+                        if (imageUrl != null) {
+                          await FirebaseFirestore.instance
+                              .collection('certificates')
+                              .doc(_uid)
+                              .collection('items')
+                              .add({
+                            'title': titleCtrl.text.trim(),
+                            'issuer': issuerCtrl.text.trim(),
+                            'date': dateCtrl.text.trim(),
+                            'imageUrl': imageUrl,
+                            'verified': false,
+                            'addedAt': FieldValue.serverTimestamp(),
+                          });
+                          if (context.mounted) Navigator.pop(context);
+                        }
+                      } catch (e) {
+                         debugPrint('Upload error: $e');
+                      } finally {
+                        modalState(() => _isUploading = false);
+                        _image = null; 
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
                       ),
+                      alignment: Alignment.center,
+                      child: _isUploading 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text('Save Achievement', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                 ],
               ),
             ),
@@ -148,8 +148,7 @@ class _CertificatesTabState extends State<CertificatesTab> {
     );
   }
 
-  Widget _sheet_field(
-      TextEditingController ctrl, String label, IconData icon) {
+  Widget _sheet_field(TextEditingController ctrl, String label, IconData icon) {
     return TextField(
       controller: ctrl,
       style: GoogleFonts.outfit(color: AppColors.textPrimary),
@@ -158,9 +157,7 @@ class _CertificatesTabState extends State<CertificatesTab> {
         prefixIcon: Icon(icon, color: AppColors.textMuted, size: 18),
         filled: true,
         fillColor: AppColors.cardLight,
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
       ),
     );
   }
@@ -169,56 +166,35 @@ class _CertificatesTabState extends State<CertificatesTab> {
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
-        // Header
         SliverToBoxAdapter(
           child: Container(
             width: double.infinity,
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(28),
-                bottomRight: Radius.circular(28),
-              ),
+              gradient: LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)]),
+              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
             ),
-            padding: const EdgeInsets.fromLTRB(24, 52, 24, 28),
+            padding: const EdgeInsets.fromLTRB(24, 64, 24, 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Certificate Vault 🏆',
-                    style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text('Store all your achievements here',
-                    style:
-                        GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
-                const SizedBox(height: 20),
+                Text('Certificate Vault 🏆', style: GoogleFonts.outfit(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800)),
+                Text('Manage and store your personal achievements', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 24),
                 GestureDetector(
                   onTap: _showAddDialog,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.4)),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.add_rounded,
-                            color: Colors.white, size: 18),
+                        const Icon(Icons.add_rounded, color: Colors.white, size: 20),
                         const SizedBox(width: 8),
-                        Text('Add Certificate',
-                            style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600)),
+                        Text('Add New Certificate', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w700)),
                       ],
                     ),
                   ),
@@ -228,73 +204,26 @@ class _CertificatesTabState extends State<CertificatesTab> {
           ),
         ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 20)),
-
-        // Certificates Grid
         StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('certificates')
-              .doc(_uid)
-              .collection('items')
-              .orderBy('addedAt', descending: true)
-              .snapshots(),
+          stream: FirebaseFirestore.instance.collection('certificates').doc(_uid).collection('items').orderBy('addedAt', descending: true).snapshots(),
           builder: (context, snap) {
             if (!snap.hasData || snap.data!.docs.isEmpty) {
-              return SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(40),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.workspace_premium_rounded,
-                            size: 40, color: Color(0xFF8B5CF6)),
-                      ),
-                      const SizedBox(height: 16),
-                      Text('No certificates yet',
-                          style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary)),
-                      const SizedBox(height: 4),
-                      Text('Tap "Add Certificate" to store your achievements',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(
-                              fontSize: 13, color: AppColors.textMuted)),
-                    ],
-                  ),
-                ),
-              );
+              return SliverFillRemaining(child: _empty());
             }
             final docs = snap.data!.docs;
             return SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(20),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  mainAxisSpacing: 14,
-                  crossAxisSpacing: 14,
-                  childAspectRatio: 0.9,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 0.85,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, i) {
                     final d = docs[i].data() as Map<String, dynamic>;
-                    final docId = docs[i].id;
-                    return _CertCard(
-                      data: d,
-                      onDelete: () async {
-                        await FirebaseFirestore.instance
-                            .collection('certificates')
-                            .doc(_uid)
-                            .collection('items')
-                            .doc(docId)
-                            .delete();
-                      },
-                    );
+                    return _CertCard(data: d, docId: docs[i].id, uid: _uid);
                   },
                   childCount: docs.length,
                 ),
@@ -302,97 +231,104 @@ class _CertificatesTabState extends State<CertificatesTab> {
             );
           },
         ),
-        const SliverToBoxAdapter(child: SizedBox(height: 30)),
       ],
     );
   }
+
+  Widget _empty() => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.workspace_premium_rounded, size: 56, color: AppColors.textMuted.withValues(alpha: 0.2)),
+        const SizedBox(height: 16),
+        Text('No Certificates Uploaded', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        Text('Store your achievements in the vault', style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textSecondary)),
+      ],
+    ),
+  );
 }
 
 class _CertCard extends StatelessWidget {
   final Map<String, dynamic> data;
-  final VoidCallback onDelete;
-
-  const _CertCard({required this.data, required this.onDelete});
+  final String docId, uid;
+  const _CertCard({required this.data, required this.docId, required this.uid});
 
   @override
   Widget build(BuildContext context) {
-    final colors = [
-      [const Color(0xFF8B5CF6), const Color(0xFF6D28D9)],
-      [const Color(0xFF06B6D4), const Color(0xFF0284C7)],
-      [const Color(0xFF10B981), const Color(0xFF047857)],
-      [const Color(0xFFF97316), const Color(0xFFEA580C)],
-    ];
-    final colorIdx =
-        (data['title'] as String? ?? '').length % colors.length;
-    final c1 = colors[colorIdx][0];
-    final c2 = colors[colorIdx][1];
-
+    final verified = data['verified'] ?? false;
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [c1.withValues(alpha: 0.08), c2.withValues(alpha: 0.04)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c1.withValues(alpha: 0.2)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
-      padding: const EdgeInsets.all(16),
       child: Stack(
         children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [c1, c2]),
-                  borderRadius: BorderRadius.circular(12),
-                  image: data['imageUrl'] != null && data['imageUrl'].isNotEmpty
-                    ? DecorationImage(image: NetworkImage(data['imageUrl']), fit: BoxFit.cover, opacity: 0.3)
-                    : null,
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                       if (data['imageUrl'] != null) {
+                        Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => FullScreenImageViewer(imageUrl: data['imageUrl'], title: data['title'] ?? 'Certificate')
+                        ));
+                       }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: AppColors.cardLight,
+                        borderRadius: BorderRadius.circular(14),
+                        image: data['imageUrl'] != null ? DecorationImage(image: NetworkImage(data['imageUrl']), fit: BoxFit.cover) : null,
+                      ),
+                      child: data['imageUrl'] == null ? const Icon(Icons.image_not_supported_rounded, color: AppColors.textMuted) : null,
+                    ),
+                  ),
                 ),
-                child: Icon(
-                  data['imageUrl'] != null && data['imageUrl'].isNotEmpty ? Icons.image_rounded : Icons.workspace_premium_rounded,
-                  color: Colors.white, 
-                  size: 22
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(data['title'] ?? '',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: AppColors.textPrimary)),
-              const SizedBox(height: 4),
-              if ((data['issuer'] ?? '').isNotEmpty)
-                Text(data['issuer'] ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.outfit(
-                        fontSize: 11, color: AppColors.textSecondary)),
-              if ((data['date'] ?? '').isNotEmpty)
-                Text(data['date'] ?? '',
-                    style: GoogleFonts.outfit(
-                        fontSize: 11, color: AppColors.textMuted)),
-            ],
+                const SizedBox(height: 10),
+                Text(data['title'] ?? 'Certificate', maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13)),
+                Text(data['issuer'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textSecondary)),
+              ],
+            ),
           ),
-          Positioned(
-            top: 0,
-            right: 0,
-            child: GestureDetector(
-              onTap: onDelete,
+          if (verified)
+            Positioned(
+              top: 8, right: 8,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.delete_outline_rounded,
-                    size: 16, color: AppColors.error),
+                decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
+                child: const Icon(Icons.verified_rounded, color: Colors.white, size: 14),
+              ),
+            ),
+          Positioned(
+            top: 6, left: 6,
+            child: GestureDetector(
+              onTap: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Delete Certificate?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
+                    ],
+                  )
+                );
+                if (confirm == true) {
+                  await FirebaseFirestore.instance.collection('certificates').doc(uid).collection('items').doc(docId).delete();
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.9), shape: BoxShape.circle),
+                child: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 14),
               ),
             ),
           ),

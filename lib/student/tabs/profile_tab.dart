@@ -5,7 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../app_theme.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../services/cloudinary_service.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/image_viewer.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -47,7 +50,10 @@ class _ProfileTabState extends State<ProfileTab> {
     final username = _userData?['username'] ?? '';
     final phone = _userData?['phone'] ?? 'Not set';
     final email = _userData?['email'] ?? '${username}@astar.app';
-    final grade = _userData?['grade'] ?? 'Not set';
+    final grade = _userData?['classLevel'] ?? _userData?['grade'] ?? 'Not set';
+    final school = _userData?['school'] ?? 'Not set';
+    final address = _userData?['address'] ?? 'Not set';
+
     final joinedAt = _userData?['joinedAt'] as Timestamp?;
     final joinDate = joinedAt != null
         ? '${joinedAt.toDate().day}/${joinedAt.toDate().month}/${joinedAt.toDate().year}'
@@ -69,7 +75,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 bottomRight: Radius.circular(32),
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(24, 56, 24, 32),
+            padding: const EdgeInsets.fromLTRB(24, 64, 24, 32),
             child: Column(
               children: [
                 // Avatar
@@ -91,11 +97,29 @@ class _ProfileTabState extends State<ProfileTab> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(name,
-                    style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800)),
+                Row(
+                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                   children: [
+                     Expanded(
+                       child: Text(name,
+                           style: GoogleFonts.outfit(
+                               color: Colors.white,
+                               fontSize: 22,
+                               fontWeight: FontWeight.w800)),
+                     ),
+                     GestureDetector(
+                       onTap: () => _logout(),
+                       child: Container(
+                         padding: const EdgeInsets.all(8),
+                         decoration: BoxDecoration(
+                           color: Colors.white.withValues(alpha: 0.2),
+                           borderRadius: BorderRadius.circular(10),
+                         ),
+                         child: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
+                       ),
+                     ),
+                   ],
+                ),
                 Text('@$username',
                     style:
                         GoogleFonts.outfit(color: Colors.white70, fontSize: 14)),
@@ -146,14 +170,14 @@ class _ProfileTabState extends State<ProfileTab> {
                       value: name),
                   _InfoDivider(),
                   _InfoRow(
-                      icon: Icons.alternate_email_rounded,
-                      label: 'Username',
-                      value: '@$username'),
+                      icon: Icons.school_rounded,
+                      label: 'School / College',
+                      value: school),
                   _InfoDivider(),
                   _InfoRow(
-                      icon: Icons.email_rounded,
-                      label: 'Email',
-                      value: email),
+                      icon: Icons.class_rounded,
+                      label: 'Grade / Class',
+                      value: grade),
                   _InfoDivider(),
                   _InfoRow(
                       icon: Icons.phone_rounded,
@@ -161,9 +185,9 @@ class _ProfileTabState extends State<ProfileTab> {
                       value: phone),
                   _InfoDivider(),
                   _InfoRow(
-                      icon: Icons.class_rounded,
-                      label: 'Grade/Class',
-                      value: grade),
+                      icon: Icons.location_on_rounded,
+                      label: 'Address',
+                      value: address),
                 ],
               ),
             ),
@@ -257,70 +281,73 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 
   void _uploadCertificate() async {
-    final nameCtrl = TextEditingController();
-    final result = await showDialog<bool>(
+    final titleCtrl = TextEditingController();
+    final picker = ImagePicker();
+    XFile? pickedImg;
+    bool uploading = false;
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Upload Certificate',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: InputDecoration(
-                labelText: 'Certificate Name',
-                hintText: 'e.g. Math Olympiad 2025',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Upload Certificate', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () async {
+                    final img = await picker.pickImage(source: ImageSource.gallery);
+                    if (img != null) setModalState(() => pickedImg = img);
+                  },
+                  child: Container(
+                    height: 120, width: double.infinity,
+                    decoration: BoxDecoration(color: AppColors.cardLight, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.cardBorder)),
+                    child: pickedImg != null 
+                      ? ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.file(File(pickedImg!.path), fit: BoxFit.cover))
+                      : const Icon(Icons.add_a_photo_rounded, color: AppColors.primary, size: 32),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: titleCtrl,
+                  decoration: InputDecoration(labelText: 'Certificate Title', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                ),
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: uploading ? null : () async {
+                    if (titleCtrl.text.isEmpty || pickedImg == null) return;
+                    setModalState(() => uploading = true);
+                    final url = await CloudinaryService().uploadFile(File(pickedImg!.path), folder: 'certificates');
+                    if (url != null) {
+                      await FirebaseFirestore.instance.collection('certificates').doc(_uid).collection('items').add({
+                        'title': titleCtrl.text.trim(),
+                        'imageUrl': url,
+                        'verified': false,
+                        'addedAt': FieldValue.serverTimestamp(),
+                      });
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(14)),
+                    alignment: Alignment.center,
+                    child: uploading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text('Save Certificate', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text('Certificate will be stored as a record in your profile.',
-                style: GoogleFonts.outfit(
-                    fontSize: 12, color: AppColors.textSecondary)),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel',
-                style: GoogleFonts.outfit(color: AppColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Save',
-                style: GoogleFonts.outfit(
-                    color: AppColors.primary, fontWeight: FontWeight.w600)),
-          ),
-        ],
       ),
     );
-
-    if (result == true && nameCtrl.text.trim().isNotEmpty) {
-      await FirebaseFirestore.instance
-          .collection('certificates')
-          .doc(_uid)
-          .collection('items')
-          .add({
-        'name': nameCtrl.text.trim(),
-        'uploadedAt': FieldValue.serverTimestamp(),
-        'verified': false,
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Certificate uploaded!',
-                style: GoogleFonts.outfit()),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-    nameCtrl.dispose();
   }
 
   void _showEditProfile() {
@@ -675,97 +702,72 @@ class _CertificatesSection extends StatelessWidget {
           .collection('certificates')
           .doc(uid)
           .collection('items')
-          .orderBy('uploadedAt', descending: true)
+          .orderBy('addedAt', descending: true)
           .snapshots(),
       builder: (context, snap) {
         if (!snap.hasData || snap.data!.docs.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 28),
-              decoration: BoxDecoration(
-                color: AppColors.cardLight,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  Icon(Icons.workspace_premium_rounded,
-                      size: 36, color: AppColors.textMuted),
-                  const SizedBox(height: 8),
-                  Text('No certificates yet',
-                      style: GoogleFonts.outfit(
-                          color: AppColors.textMuted, fontSize: 13)),
-                ],
-              ),
-            ),
-          );
+           return const SizedBox.shrink();
         }
         final docs = snap.data!.docs;
         return SizedBox(
-          height: 100,
+          height: 90,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             scrollDirection: Axis.horizontal,
             itemCount: docs.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, i) {
               final d = docs[i].data() as Map<String, dynamic>;
               final verified = d['verified'] ?? false;
               return Container(
-                width: 180,
-                padding: const EdgeInsets.all(14),
+                width: 220,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: verified
-                      ? const LinearGradient(
-                          colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)])
-                      : null,
-                  color: verified ? null : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: verified
-                      ? null
-                      : Border.all(color: AppColors.cardBorder),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.cardBorder),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 4))],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.workspace_premium_rounded,
-                            color: verified ? Colors.white : AppColors.primary,
-                            size: 20),
-                        const SizedBox(width: 6),
-                        if (verified)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text('VERIFIED',
-                                style: GoogleFonts.outfit(
-                                    color: Colors.white,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w700)),
-                          )
-                        else
-                          Text('Pending',
-                              style: GoogleFonts.outfit(
-                                  color: AppColors.warning,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600)),
-                      ],
+                    GestureDetector(
+                      onTap: () {
+                        if (d['imageUrl'] != null) {
+                          Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => FullScreenImageViewer(imageUrl: d['imageUrl'], title: d['title'] ?? 'Certificate')
+                          ));
+                        }
+                      },
+                      child: Container(
+                        width: 50, height: 50,
+                        decoration: BoxDecoration(
+                          color: AppColors.cardLight,
+                          borderRadius: BorderRadius.circular(10),
+                          image: d['imageUrl'] != null ? DecorationImage(image: NetworkImage(d['imageUrl']), fit: BoxFit.cover) : null,
+                        ),
+                        child: d['imageUrl'] == null ? Icon(Icons.workspace_premium_rounded, color: verified ? AppColors.primary : AppColors.textMuted) : null,
+                      ),
                     ),
-                    Text(d['name'] ?? '',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
-                            color:
-                                verified ? Colors.white : AppColors.textPrimary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(d['title'] ?? (d['name'] ?? 'Certificate'), maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13)),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(verified ? Icons.verified_rounded : Icons.pending_rounded, size: 12, color: verified ? AppColors.success : AppColors.warning),
+                              const SizedBox(width: 4),
+                              Text(verified ? 'Verified' : 'Pending', 
+                                style: GoogleFonts.outfit(fontSize: 10, color: verified ? AppColors.success : AppColors.warning, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               );

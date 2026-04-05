@@ -17,6 +17,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _usernameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
+  final _classCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
+  final _schoolCtrl = TextEditingController();
 
   String _role = 'aspirant';
   bool _obscurePass = true;
@@ -37,6 +40,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _usernameCtrl.dispose();
     _passCtrl.dispose();
     _confirmCtrl.dispose();
+    _classCtrl.dispose();
+    _addressCtrl.dispose();
+    _schoolCtrl.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -64,11 +70,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final username = _usernameCtrl.text.trim();
     final pass = _passCtrl.text.trim();
     final confirm = _confirmCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim();
 
-    if (name.isEmpty || username.isEmpty || pass.isEmpty || confirm.isEmpty) {
-      setState(() => _error = 'Please fill in all fields.');
+    if (name.isEmpty || username.isEmpty || pass.isEmpty || confirm.isEmpty || phone.isEmpty) {
+      setState(() => _error = 'Please fill in all mandatory fields.');
       return;
     }
+
+    if (_role == 'student') {
+      if (_classCtrl.text.isEmpty || _schoolCtrl.text.isEmpty) {
+        setState(() => _error = 'Please fill all student details.');
+        return;
+      }
+    }
+
     if (pass != confirm) {
       setState(() => _error = 'Passwords do not match.');
       return;
@@ -90,12 +105,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: pass,
         role: _role,
         email: _emailCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim(),
+        phone: phone,
+        classLevel: _classCtrl.text.trim(),
+        address: _addressCtrl.text.trim(),
+        school: _schoolCtrl.text.trim(),
       );
       if (!mounted) return;
       if (user.role == 'aspirant') {
         Navigator.pushReplacementNamed(context, '/aspirant-dashboard');
       } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful! Please login.')),
+        );
         Navigator.pushReplacementNamed(context, '/login');
       }
     } on Exception catch (e) {
@@ -152,7 +173,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               color: AppColors.textSecondary, fontSize: 14)),
                       const SizedBox(height: 30),
 
-                      // Name
+                      // Role selector
+                      _buildLabel('I am a…'),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          _RoleChip(
+                            label: 'Aspirant',
+                            icon: Icons.emoji_events_rounded,
+                            selected: _role == 'aspirant',
+                            gradient: AppColors.primaryGradient,
+                            onTap: () => setState(() => _role = 'aspirant'),
+                          ),
+                          const SizedBox(width: 12),
+                          _RoleChip(
+                            label: 'Student',
+                            icon: Icons.school_rounded,
+                            selected: _role == 'student',
+                            gradient: AppColors.accentGradient,
+                            onTap: () => setState(() => _role = 'student'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Basic Details
+                      _buildHeader('Basic Information'),
+                      const SizedBox(height: 16),
+                      
                       _buildLabel('Full Name'),
                       const SizedBox(height: 8),
                       _buildField(
@@ -160,6 +208,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         hint: 'Enter your full name',
                         icon: Icons.badge_rounded,
                       ),
+                      const SizedBox(height: 16),
+
+                      _buildLabel('Phone Number'),
+                      const SizedBox(height: 8),
+                      _buildField(
+                        controller: _phoneCtrl,
+                        hint: 'Enter your contact number',
+                        icon: Icons.phone_rounded,
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Student Specific Fields
+                      if (_role == 'student') ...[
+                        _buildHeader('Student Details'),
+                        const SizedBox(height: 16),
+                        
+                        _buildLabel('Class / Course'),
+                        const SizedBox(height: 8),
+                        _buildField(
+                          controller: _classCtrl,
+                          hint: 'e.g. 10th Standard, JEE, NEET',
+                          icon: Icons.class_rounded,
+                        ),
+                        const SizedBox(height: 16),
+
+                        _buildLabel('School / College Name'),
+                        const SizedBox(height: 8),
+                        _buildField(
+                          controller: _schoolCtrl,
+                          hint: 'Enter your institution name',
+                          icon: Icons.account_balance_rounded,
+                        ),
+                        const SizedBox(height: 16),
+
+                        _buildLabel('Home Address'),
+                        const SizedBox(height: 8),
+                        _buildField(
+                          controller: _addressCtrl,
+                          hint: 'Enter your full address',
+                          icon: Icons.location_on_rounded,
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      _buildHeader('Account Security'),
                       const SizedBox(height: 16),
 
                       // Email
@@ -170,17 +265,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         hint: 'Enter your email',
                         icon: Icons.email_rounded,
                         keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Phone
-                      _buildLabel('Phone Number'),
-                      const SizedBox(height: 8),
-                      _buildField(
-                        controller: _phoneCtrl,
-                        hint: 'Enter your contact number',
-                        icon: Icons.phone_rounded,
-                        keyboardType: TextInputType.phone,
                       ),
                       const SizedBox(height: 16),
 
@@ -293,38 +377,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               setState(() => _obscureConfirm = !_obscureConfirm),
                         ),
                       ),
-                      const SizedBox(height: 20),
-
-                      // Role selector
-                      _buildLabel('I am a…'),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          _RoleChip(
-                            label: 'Aspirant',
-                            icon: Icons.emoji_events_rounded,
-                            selected: _role == 'aspirant',
-                            gradient: AppColors.primaryGradient,
-                            onTap: () => setState(() => _role = 'aspirant'),
-                          ),
-                          const SizedBox(width: 12),
-                          _RoleChip(
-                            label: 'Student',
-                            icon: Icons.school_rounded,
-                            selected: _role == 'student',
-                            gradient: AppColors.accentGradient,
-                            onTap: () => setState(() => _role = 'student'),
-                          ),
-                          const SizedBox(width: 12),
-                          _RoleChip(
-                            label: 'Parent',
-                            icon: Icons.family_restroom_rounded,
-                            selected: _role == 'parent',
-                            gradient: const LinearGradient(colors: [Color(0xFFF43F5E), Color(0xFFBE123C)]),
-                            onTap: () => setState(() => _role = 'parent'),
-                          ),
-                        ],
-                      ),
 
                       if (_error != null) ...[
                         const SizedBox(height: 16),
@@ -419,6 +471,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
           fontSize: 13,
           fontWeight: FontWeight.w600));
 
+  Widget _buildHeader(String text) => Row(
+        children: [
+          Container(
+            width: 4,
+            height: 18,
+            decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(width: 8),
+          Text(text,
+              style: GoogleFonts.outfit(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700)),
+        ],
+      );
+
   Widget _buildField({
     required TextEditingController controller,
     required String hint,
@@ -426,11 +496,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     bool obscure = false,
     Widget? suffixIcon,
     TextInputType? keyboardType,
+    int maxLines = 1,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
+      maxLines: maxLines,
       style: GoogleFonts.outfit(color: AppColors.textPrimary),
       decoration: InputDecoration(
         hintText: hint,

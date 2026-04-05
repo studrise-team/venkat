@@ -18,6 +18,7 @@ import 'auth/register_screen.dart';
 import 'admin/admin_dashboard.dart';
 import 'admin/exam_management.dart';
 import 'admin/student_admin_dashboard.dart';
+import 'admin/academic_management/class_management_screen.dart';
 
 // Aspirant
 import 'aspirant/aspirant_dashboard.dart';
@@ -27,8 +28,6 @@ import 'aspirant/exam_action_screen.dart';
 import 'student/student_dashboard.dart';
 import 'student/tabs/certificates_tab.dart';
 
-// Parent
-import 'parent/parent_dashboard.dart';
 
 // Upload (shared admin flow)
 import 'screens/upload_screen.dart';
@@ -80,6 +79,7 @@ class AstarApp extends StatelessWidget {
           '/admin-dashboard': (context) => const AdminDashboard(),
           '/exam-management': (context) => const ExamManagementScreen(),
           '/student-admin': (context) => const StudentAdminDashboard(),
+          '/academic-management': (context) => const ClassManagementScreen(),
 
           // Aspirant
           '/aspirant-dashboard': (context) => const AspirantDashboard(),
@@ -92,8 +92,6 @@ class AstarApp extends StatelessWidget {
             body: const CertificatesTab()
           ),
 
-          // Parent
-          '/parent-dashboard': (context) => const ParentDashboard(),
 
           // Shared quiz flow (admin uploads, aspirant takes)
           '/upload': (context) => const UploadScreen(),

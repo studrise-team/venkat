@@ -6,10 +6,10 @@ import '../app_theme.dart';
 import '../services/auth_service.dart';
 import 'student_admin_tabs/sa_students_tab.dart';
 import 'student_admin_tabs/sa_attendance_tab.dart';
-import 'student_admin_tabs/sa_fees_tab.dart';
 import 'student_admin_tabs/sa_quiz_tab.dart';
 import 'student_admin_tabs/sa_announcements_tab.dart';
-import 'student_admin_tabs/sa_materials_tab.dart';
+
+import '../widgets/logout_dialog.dart';
 
 /// Admin dashboard specifically for managing tuition center *students*.
 class StudentAdminDashboard extends StatefulWidget {
@@ -33,26 +33,42 @@ class _StudentAdminDashboardState extends State<StudentAdminDashboard> {
       case 2:
         return const SAAttendanceTab();
       case 3:
-        return const SAFeesTab();
-      case 4:
         return const SAQuizTab();
-      case 5:
+      case 4:
         return const SAAnnouncementsTab();
-      case 6:
-        return const SAMaterialsTab();
       default:
         return const SizedBox.shrink();
     }
   }
 
+  Future<void> _confirmLogout(BuildContext context) async {
+    await LogoutDialog.show(context);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: _buildPage(),
-      bottomNavigationBar: _AdminBottomNav(
-        currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_currentIndex != 0) {
+          setState(() => _currentIndex = 0);
+        } else {
+           // Go back to Admin Hub if possible, otherwise confirm logout
+           if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+           } else {
+              _confirmLogout(context);
+           }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        body: _buildPage(),
+        bottomNavigationBar: _AdminBottomNav(
+          currentIndex: _currentIndex,
+          onTap: (i) => setState(() => _currentIndex = i),
+        ),
       ),
     );
   }
@@ -72,10 +88,8 @@ class _AdminBottomNav extends StatelessWidget {
       {'icon': Icons.home_rounded, 'label': 'Home'},
       {'icon': Icons.people_rounded, 'label': 'Students'},
       {'icon': Icons.calendar_today_rounded, 'label': 'Attend.'},
-      {'icon': Icons.receipt_long_rounded, 'label': 'Fees'},
       {'icon': Icons.quiz_rounded, 'label': 'Quiz'},
       {'icon': Icons.campaign_rounded, 'label': 'Announce'},
-      {'icon': Icons.description_rounded, 'label': 'Materials'},
     ];
     return Container(
       decoration: BoxDecoration(
@@ -171,14 +185,23 @@ class _HomeOverviewTab extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
+                    GestureDetector(
+                      onTap: () {
+                         if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                         } else {
+                            (context.findAncestorStateOfType<_StudentAdminDashboardState>())?._confirmLogout(context);
+                         }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.arrow_back_rounded,
+                            color: Colors.white, size: 20),
                       ),
-                      child: const Icon(Icons.school_rounded,
-                          color: Colors.white, size: 24),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -194,23 +217,6 @@ class _HomeOverviewTab extends StatelessWidget {
                               style: GoogleFonts.outfit(
                                   color: Colors.white70, fontSize: 13)),
                         ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () async {
-                        await AuthService().signOut();
-                        if (context.mounted) {
-                          Navigator.pushReplacementNamed(context, '/login');
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.logout_rounded,
-                            color: Colors.white, size: 20),
                       ),
                     ),
                   ],
@@ -277,18 +283,18 @@ class _HomeOverviewTab extends StatelessWidget {
                   onTap: () => onNavigate(2),
                 ),
                 _ActionTile(
-                  icon: Icons.receipt_long_rounded,
-                  label: 'Record Payment',
-                  subtitle: 'Update fee status',
-                  gradient: const LinearGradient(
-                      colors: [Color(0xFFF97316), Color(0xFFEA580C)]),
+                  icon: Icons.quiz_rounded,
+                  label: 'Quiz Hub',
+                  subtitle: 'Daily quiz & results',
+                  gradient: AppColors.accentGradient,
                   onTap: () => onNavigate(3),
                 ),
                 _ActionTile(
-                  icon: Icons.quiz_rounded,
-                  label: 'Create Quiz',
-                  subtitle: 'Daily quiz for students',
-                  gradient: AppColors.accentGradient,
+                  icon: Icons.campaign_rounded,
+                  label: 'Announcements',
+                  subtitle: 'Central broadcasts',
+                  gradient: const LinearGradient(
+                      colors: [Color(0xFFF97316), Color(0xFFEA580C)]),
                   onTap: () => onNavigate(4),
                 ),
               ],
@@ -338,13 +344,12 @@ class _StatsRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           _StatCard(
-            label: 'Pending Fees',
+            label: 'Active Batches',
             gradient: const LinearGradient(
-                colors: [Color(0xFFF97316), Color(0xFFEA580C)]),
-            icon: Icons.receipt_long_rounded,
+                colors: [Color(0xFF10B981), Color(0xFF047857)]),
+            icon: Icons.class_rounded,
             stream: FirebaseFirestore.instance
-                .collection('users')
-                .where('role', isEqualTo: 'student')
+                .collection('batches')
                 .snapshots(),
           ),
         ],

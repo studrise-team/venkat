@@ -199,9 +199,17 @@ class QuizProvider extends ChangeNotifier {
 
     // Save result to Firestore
     if (_currentQuizId.isNotEmpty) {
+      debugPrint('Saving result for quiz: $_currentQuizId');
       FirebaseService()
           .saveQuizResult(_currentQuizId, _result!, quizTitle: _currentQuizTitle)
-          .catchError((e) => debugPrint('Failed to save result: $e'));
+          .then((_) => debugPrint('Result saved successfully'))
+          .catchError((e) {
+            debugPrint('CRITICAL: Failed to save result: $e');
+            _errorMessage = 'Result could not be saved to cloud. Please contact admin.';
+            notifyListeners();
+          });
+    } else {
+      debugPrint('WARNING: No quizId found, result will not be saved to Firestore');
     }
   }
 

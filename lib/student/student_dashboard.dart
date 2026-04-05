@@ -5,12 +5,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../app_theme.dart';
 import '../services/auth_service.dart';
 import 'tabs/attendance_tab.dart';
-import 'tabs/fees_tab.dart';
 import 'tabs/quiz_tab.dart';
 import 'tabs/profile_tab.dart';
 import 'tabs/leaderboard_tab.dart';
-import 'tabs/ai_companion_tab.dart';
 import 'tabs/materials_tab.dart';
+
+import '../widgets/logout_dialog.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -27,9 +27,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
   final List<_NavItem> _navItems = const [
     _NavItem(icon: Icons.home_rounded, label: 'Home'),
     _NavItem(icon: Icons.calendar_today_rounded, label: 'Atten.'),
-    _NavItem(icon: Icons.receipt_long_rounded, label: 'Fees'),
-    _NavItem(icon: Icons.description_rounded, label: 'Study'),
-    _NavItem(icon: Icons.auto_awesome_rounded, label: 'AI Partner'),
+    _NavItem(icon: Icons.description_rounded, label: 'Academic'),
     _NavItem(icon: Icons.quiz_rounded, label: 'Quiz'),
     _NavItem(icon: Icons.person_rounded, label: 'Profile'),
   ];
@@ -53,37 +51,117 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   Widget _buildBody() {
+    final isApproved = _userData?['isApproved'] ?? false;
+    
+    if (!isApproved) {
+      return _buildPendingApprovalScreen();
+    }
+
     switch (_currentIndex) {
       case 0:
         return _HomeTab(userData: _userData);
       case 1:
         return const AttendanceTab();
       case 2:
-        return const FeesTab();
-      case 3:
         return const MaterialsTab();
-      case 4:
-        return const AICompanionTab();
-      case 5:
+      case 3:
         return const QuizTab();
-      case 6:
+      case 4:
         return const ProfileTab();
       default:
         return const SizedBox();
     }
   }
 
+  Future<void> _confirmLogout(BuildContext context) async {
+    await LogoutDialog.show(context);
+  }
+
+  Widget _buildPendingApprovalScreen() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.lock_person_rounded, size: 80, color: AppColors.error),
+          ),
+          const SizedBox(height: 32),
+          Text('Access Restricted',
+            style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+          const SizedBox(height: 12),
+          Text('Your registration is currently pending admin approval. You will gain full access once your profile is verified.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.outfit(fontSize: 15, color: AppColors.textSecondary, height: 1.5)),
+          const SizedBox(height: 48),
+          _actionButton(
+            label: 'Check Status',
+            onTap: _loadUser,
+          ),
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () async {
+              await AuthService().signOut();
+              if (mounted) Navigator.pushReplacementNamed(context, '/login');
+            },
+            child: Text('Sign Out', style: GoogleFonts.outfit(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionButton({required String label, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))
+          ]
+        ),
+        alignment: Alignment.center,
+        child: Text(label, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: _loadingUser
-          ? const Center(child: CircularProgressIndicator())
-          : _buildBody(),
-      bottomNavigationBar: _BottomNav(
-        currentIndex: _currentIndex,
-        items: _navItems,
-        onTap: (i) => setState(() => _currentIndex = i),
+    final isApproved = _userData?['isApproved'] ?? false;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_currentIndex != 0) {
+          setState(() => _currentIndex = 0);
+        } else {
+          // Check if there's anything to pop in the nested navigators if we had any,
+          // but here we just confirm logout since it's the root dashboard.
+          _confirmLogout(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        body: _loadingUser
+            ? const Center(child: CircularProgressIndicator())
+            : _buildBody(),
+        bottomNavigationBar: (!isApproved || _loadingUser) ? null : _BottomNav(
+          currentIndex: _currentIndex,
+          items: _navItems,
+          onTap: (i) => setState(() => _currentIndex = i),
+        ),
       ),
     );
   }
@@ -116,7 +194,7 @@ class _BottomNav extends StatelessWidget {
         border: Border(top: BorderSide(color: AppColors.cardBorder)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, -4),
           )
@@ -198,7 +276,7 @@ class _HomeTab extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
-        // ── Header ────────────────────────────────────────────────────────
+        //Header
         SliverToBoxAdapter(
           child: Container(
             decoration: const BoxDecoration(
@@ -234,48 +312,33 @@ class _HomeTab extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // Logout
                     GestureDetector(
-                      onTap: () async {
-                        await AuthService().signOut();
-                        if (context.mounted) {
-                          Navigator.pushReplacementNamed(context, '/login');
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.logout_rounded,
-                            color: Colors.white, size: 20),
+                      onTap: () => (context.findAncestorStateOfType<_StudentDashboardState>())?._confirmLogout(context),
+                      child: const CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.white24,
+                        child: Icon(Icons.logout_rounded, color: Colors.white, size: 20),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
 
-                // ── Today's Quick Stats ────────────────────────────────────
+                //Today's Quick Stats
                 Row(
                   children: [
-                    GestureDetector(
-                      onTap: () => (context.findAncestorStateOfType<_StudentDashboardState>())?.setState(() {
-                        (context.findAncestorStateOfType<_StudentDashboardState>())?._currentIndex = 1;
-                      }),
-                      child: _QuickStat(
-                        icon: Icons.check_circle_rounded,
-                        label: 'Today',
-                        value: 'Present',
-                        color: AppColors.success,
-                      ),
+                    _QuickStat(
+                      icon: Icons.check_circle_rounded,
+                      label: 'Today',
+                      value: 'Present',
+                      color: AppColors.success,
                     ),
                     const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () => (context.findAncestorStateOfType<_StudentDashboardState>())?.setState(() {
-                        (context.findAncestorStateOfType<_StudentDashboardState>())?._currentIndex = 2;
-                      }),
-                      child: _FeeStatCard(uid: uid),
+                    _QuickStat(
+                      icon: Icons.stars_rounded,
+                      label: 'XP',
+                      value: '${userData?['xp'] ?? 0}',
+                      color: Colors.orangeAccent,
                     ),
                   ],
                 ),
@@ -284,7 +347,7 @@ class _HomeTab extends StatelessWidget {
           ),
         ),
 
-        // ── Daily Learning Tip ─────────────────────────────────────────────
+        //Daily Learning Tip
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -324,7 +387,7 @@ class _HomeTab extends StatelessWidget {
           ),
         ),
 
-        // ── Announcements ──────────────────────────────────────────────────
+        //Announcements
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
@@ -336,7 +399,7 @@ class _HomeTab extends StatelessWidget {
         ),
         SliverToBoxAdapter(child: _AnnouncementsSection()),
 
-        // ── Quick Actions ──────────────────────────────────────────────────
+        //Quick Actions
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
@@ -349,81 +412,61 @@ class _HomeTab extends StatelessWidget {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.4,
-              children: [
-                _ActionCard(
-                  icon: Icons.quiz_rounded,
-                  label: 'Today\'s Quiz',
-                  subtitle: 'Attempt now',
-                  gradient: AppColors.primaryGradient,
-                  onTap: () => (context.findAncestorStateOfType<_StudentDashboardState>())?.setState(() {
-                    (context.findAncestorStateOfType<_StudentDashboardState>())?._currentIndex = 3;
-                  }),
-                ),
-                _ActionCard(
-                  icon: Icons.auto_awesome_rounded,
-                  label: 'AI Partner',
-                  subtitle: '24/7 Tutor',
-                  gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFD946EF)]),
-                  onTap: () => (context.findAncestorStateOfType<_StudentDashboardState>())?.setState(() {
-                    (context.findAncestorStateOfType<_StudentDashboardState>())?._currentIndex = 4;
-                  }),
-                ),
-                _ActionCard(
-                  icon: Icons.workspace_premium_rounded,
-                  label: 'Certificates',
-                  subtitle: 'My vault',
-                  onTap: () => Navigator.pushNamed(context, '/certificates'),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF06B6D4), Color(0xFF0EA5E9)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                const _ActionCard(
-                  icon: Icons.emoji_events_rounded,
-                  label: 'Weekend Contest',
-                  subtitle: 'Peer vs Peer',
-                  gradient: AppColors.accentGradient,
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
+                return GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: constraints.maxWidth > 600 ? 1.6 : 1.4,
+                  children: [
+                    _ActionCard(
+                      icon: Icons.quiz_rounded,
+                      label: 'Today\'s Quiz',
+                      subtitle: 'Attempt now',
+                      gradient: AppColors.primaryGradient,
+                      onTap: () => (context.findAncestorStateOfType<_StudentDashboardState>())?.setState(() {
+                        (context.findAncestorStateOfType<_StudentDashboardState>())?._currentIndex = 3;
+                      }),
+                    ),
+                    _ActionCard(
+                      icon: Icons.description_rounded,
+                      label: 'Academic Hub',
+                      subtitle: 'Notes & Files',
+                      gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFD946EF)]),
+                      onTap: () => (context.findAncestorStateOfType<_StudentDashboardState>())?.setState(() {
+                        (context.findAncestorStateOfType<_StudentDashboardState>())?._currentIndex = 2;
+                      }),
+                    ),
+                    _ActionCard(
+                      icon: Icons.workspace_premium_rounded,
+                      label: 'Certificates',
+                      subtitle: 'My vault',
+                      onTap: () => Navigator.pushNamed(context, '/certificates'),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF06B6D4), Color(0xFF0EA5E9)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    _ActionCard(
+                      icon: Icons.emoji_events_rounded,
+                      label: 'Contest',
+                      subtitle: 'Peer vs Peer',
+                      gradient: AppColors.accentGradient,
+                      onTap: () {},
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
 
-        // ── Performance Chart ──────────────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-            child: Text('📈 Performance Trend',
-                style: GoogleFonts.outfit(
-                    fontSize: 16, fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary)),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              height: 180,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: _PerformanceChart(uid: uid),
-            ),
-          ),
-        ),
-
-        // ── Recent Quiz Results ────────────────────────────────────────────
+        //Recent Quiz Results
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
@@ -497,83 +540,6 @@ class _QuickStat extends StatelessWidget {
   }
 }
 
-class _FeeStatCard extends StatefulWidget {
-  final String uid;
-  const _FeeStatCard({required this.uid});
-
-  @override
-  State<_FeeStatCard> createState() => _FeeStatCardState();
-}
-
-class _FeeStatCardState extends State<_FeeStatCard> {
-  String _feeStatus = '...';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadFee();
-  }
-
-  Future<void> _loadFee() async {
-    final now = DateTime.now();
-    final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-    final doc = await FirebaseFirestore.instance
-        .collection('fees')
-        .doc(widget.uid)
-        .collection('months')
-        .doc(monthKey)
-        .get();
-    if (mounted) {
-      setState(() {
-        if (!doc.exists) {
-          _feeStatus = 'Pending';
-        } else {
-          _feeStatus = (doc.data()?['status'] ?? 'Pending').toString();
-        }
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isPaid = _feeStatus.toLowerCase() == 'paid';
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isPaid
-                  ? Icons.check_circle_rounded
-                  : Icons.warning_amber_rounded,
-              color: isPaid ? AppColors.success : AppColors.warning,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Fees',
-                    style: GoogleFonts.outfit(
-                        fontSize: 11, color: Colors.white60)),
-                Text(_feeStatus,
-                    style: GoogleFonts.outfit(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white)),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _AnnouncementsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -600,7 +566,7 @@ class _AnnouncementsSection extends StatelessWidget {
         }
         final docs = snap.data!.docs;
         return SizedBox(
-          height: 90,
+          height: 100,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             scrollDirection: Axis.horizontal,
@@ -609,12 +575,15 @@ class _AnnouncementsSection extends StatelessWidget {
             itemBuilder: (context, i) {
               final d = docs[i].data() as Map<String, dynamic>;
               return Container(
-                width: 240,
-                padding: const EdgeInsets.all(14),
+                width: 260,
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   border: Border.all(color: AppColors.cardBorder),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+                  ]
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,14 +593,14 @@ class _AnnouncementsSection extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(
                             fontWeight: FontWeight.w700,
-                            fontSize: 13,
+                            fontSize: 14,
                             color: AppColors.textPrimary)),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(d['body'] ?? '',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(
-                            fontSize: 12, color: AppColors.textSecondary)),
+                            fontSize: 12, color: AppColors.textSecondary, height: 1.4)),
                   ],
                 ),
               );
@@ -696,7 +665,7 @@ class _ActionCardState extends State<_ActionCard> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(widget.icon, color: Colors.white, size: 20),
@@ -757,8 +726,7 @@ class _RecentResultsSection extends StatelessWidget {
           itemCount: snap.data!.docs.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, i) {
-            final d =
-                snap.data!.docs[i].data() as Map<String, dynamic>;
+            final d = snap.data!.docs[i].data() as Map<String, dynamic>;
             final score = d['score'] ?? 0;
             final total = d['total'] ?? 1;
             final pct = (score / total * 100).round();
@@ -817,85 +785,4 @@ class _RecentResultsSection extends StatelessWidget {
       },
     );
   }
-}
-
-class _PerformanceChart extends StatelessWidget {
-  final String uid;
-  const _PerformanceChart({required this.uid});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('student_quiz_results')
-          .where('studentId', isEqualTo: uid)
-          .orderBy('submittedAt', descending: true)
-          .limit(7)
-          .snapshots(),
-      builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) return const SizedBox();
-        if (!snap.hasData || snap.data!.docs.isEmpty) {
-          return Center(child: Text('Not enough data for chart', 
-            style: GoogleFonts.outfit(color: AppColors.textMuted, fontSize: 13)));
-        }
-        final docs = snap.data!.docs.reversed.toList();
-        final scores = docs.map((doc) {
-          final d = doc.data() as Map<String, dynamic>;
-          final double s = (d['score'] as num?)?.toDouble() ?? 0.0;
-          final double t = (d['total'] as num?)?.toDouble() ?? 1.0;
-          return s / t;
-        }).toList();
-
-        return CustomPaint(
-          size: Size.infinite,
-          painter: _ChartPainter(scores: scores),
-        );
-      },
-    );
-  }
-}
-
-class _ChartPainter extends CustomPainter {
-  final List<double> scores;
-  _ChartPainter({required this.scores});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final barsPaint = Paint()
-      ..color = AppColors.primary
-      ..strokeWidth = 14
-      ..strokeCap = StrokeCap.round;
-
-    final axisPaint = Paint()
-      ..color = AppColors.cardBorder
-      ..strokeWidth = 1;
-
-    canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), axisPaint);
-    
-    if (scores.isEmpty) return;
-
-    final spacing = size.width / (scores.length + 1);
-    
-    for (int i = 0; i < scores.length; i++) {
-       final x = spacing * (i + 1);
-       final h = scores[i] * size.height;
-       
-       barsPaint.color = scores[i] >= 0.7 
-         ? AppColors.primary 
-         : scores[i] >= 0.4 
-           ? AppColors.warning 
-           : AppColors.error;
-
-       canvas.drawLine(
-         Offset(x, size.height),
-         Offset(x, size.height - h),
-         barsPaint
-       );
-       
-       canvas.drawCircle(Offset(x, size.height - h), 4, Paint()..color = Colors.white);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import '../../app_theme.dart';
-import '../../services/storage_service.dart';
+import '../../services/cloudinary_service.dart';
 
 class SAMaterialsTab extends StatefulWidget {
   const SAMaterialsTab({super.key});
@@ -198,7 +198,7 @@ class _SAMaterialsTabState extends State<SAMaterialsTab> {
     String? finalLink = _linkCtrl.text.trim();
 
     if (_selectedFile != null) {
-      finalLink = await StorageService().uploadFile(_selectedFile!, 'study_materials');
+      finalLink = await CloudinaryService().uploadFile(_selectedFile!, folder: 'study_materials');
     }
 
     if (finalLink == null) {

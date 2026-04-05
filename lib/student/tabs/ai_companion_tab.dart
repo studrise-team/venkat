@@ -76,11 +76,29 @@ class _AICompanionTabState extends State<AICompanionTab> {
                     child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 24),
                   ),
                   const SizedBox(width: 12),
-                  Text('AI Study Partner',
-                      style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800)),
+                    Expanded(
+                      child: Text('AI Study Partner',
+                          style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800)),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        final dashboard = context.findAncestorStateOfType<State>();
+                        if (dashboard != null && dashboard.runtimeType.toString().contains('Dashboard')) {
+                          (dashboard as dynamic)._confirmLogout(context);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 8),

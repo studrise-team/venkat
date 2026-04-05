@@ -25,6 +25,9 @@ class AuthService {
     required String role,
     String? email,
     String? phone,
+    String? classLevel,
+    String? address,
+    String? school,
   }) async {
     // Check username uniqueness
     final existing = await _db
@@ -48,6 +51,10 @@ class AuthService {
       role: role,
       email: email?.trim(),
       phone: phone?.trim(),
+      classLevel: classLevel?.trim(),
+      address: address?.trim(),
+      school: school?.trim(),
+      isApproved: role != 'student', // Students need approval, others (aspirant) don't for now
     );
     await _db.collection('users').doc(uid).set(user.toMap());
     return user;

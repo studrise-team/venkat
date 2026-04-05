@@ -3,333 +3,275 @@ import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/ai_service.dart';
+import '../widgets/logout_dialog.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
 
   void _logout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Logout',
-            style: GoogleFonts.outfit(
-                color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
-        content: Text('Are you sure you want to logout?',
-            style: GoogleFonts.outfit(color: AppColors.textSecondary)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel',
-                  style: GoogleFonts.outfit(color: AppColors.textSecondary))),
-          TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text('Logout',
-                  style: GoogleFonts.outfit(
-                      color: AppColors.error, fontWeight: FontWeight.w600))),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      await AuthService().signOut();
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    }
+    await LogoutDialog.show(context);
   }
 
-  void _showAIConfigDialog(BuildContext context) {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Gemini AI Config', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Enter your Gemini API Key to enable the AI Study Partner.',
-                style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textSecondary)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: ctrl,
-              decoration: InputDecoration(
-                labelText: 'API Key',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              if (ctrl.text.isNotEmpty) {
-                await AIService().updateApiKey(ctrl.text.trim());
-                if (ctx.mounted) Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('AI Key updated successfully!')));
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6)),
-            child: const Text('Save Key', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.bgGradient),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // ── Header ─────────────────────────────────────────────────
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.admin_panel_settings_rounded,
-                          color: Colors.white, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Admin Dashboard',
-                              style: GoogleFonts.outfit(
-                                color: AppColors.textPrimary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                              )),
-                          Text('Manage exams & students',
-                              style: GoogleFonts.outfit(
-                                  color: AppColors.textSecondary, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.logout_rounded,
-                          color: AppColors.textSecondary),
-                      tooltip: 'Logout',
-                      onPressed: () => _logout(context),
-                    ),
-                  ],
-                ),
-              ),
-
-              // ── Welcome banner ─────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _logout(context);
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // ── Header ─────────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                   child: Row(
                     children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.primaryGradient,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Welcome, Admin!',
+                            Text('Admin Hub',
                                 style: GoogleFonts.outfit(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
                                 )),
-                            const SizedBox(height: 4),
-                            Text(
-                                'Manage all exam content\nfrom here.',
-                                style: GoogleFonts.outfit(
-                                    color: Colors.white70, fontSize: 13, height: 1.5)),
+                            Text('Command Centre',
+                                style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13)),
                           ],
                         ),
                       ),
-                      const Icon(Icons.school_rounded,
-                          color: Colors.white30, size: 60),
+                      IconButton(
+                        icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
+                        tooltip: 'Logout',
+                        onPressed: () => _logout(context),
+                      ),
                     ],
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 28),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Management',
-                      style: GoogleFonts.outfit(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.2,
-                      )),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // ── Menu Cards ─────────────────────────────────────────────
-              Expanded(
-                child: Padding(
+                // ── Welcome banner ─────────────────────────────────────────
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      _DashCard(
-                        icon: Icons.library_books_rounded,
-                        gradient: AppColors.primaryGradient,
-                        title: 'Examination Management',
-                        subtitle:
-                            'Mock Tests, Previous Papers, Notes, Videos, Daily Quiz, Live Classes',
-                        onTap: () => Navigator.pushNamed(
-                            context, '/exam-management'),
-                      ),
-                      const SizedBox(height: 16),
-                      _DashCard(
-                        icon: Icons.people_rounded,
-                        gradient: AppColors.accentGradient,
-                        title: 'Student Management',
-                        subtitle: 'View enrolled students, track attendance, and fees',
-                        onTap: () => Navigator.pushNamed(context, '/student-admin'),
-                      ),
-                      const SizedBox(height: 16),
-                      _DashCard(
-                        icon: Icons.auto_awesome_rounded,
-                        gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFD946EF)]),
-                        title: 'AI Companion Config',
-                        subtitle: 'Set Gemini API key for student study partner',
-                        onTap: () => _showAIConfigDialog(context),
-                      ),
-                    ],
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.25),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        )
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Ready to Guide?',
+                                  style: GoogleFonts.outfit(
+                                      color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                              const SizedBox(height: 8),
+                              Text('Manage exams, students, and\nacademic resources with ease.',
+                                  style: GoogleFonts.outfit(color: Colors.white.withValues(alpha: 0.8), fontSize: 13, height: 1.5)),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.auto_awesome_motion_rounded, color: Colors.white38, size: 64),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 32),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('MANAGEMENT CONSOLE',
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                        )),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ── Menu Cards (Adaptive Grid/List) ────────────────────────
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet = constraints.maxWidth > 700;
+                      if (isTablet) {
+                        return GridView.count(
+                          crossAxisCount: 2,
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 2.2,
+                          children: _buildCards(context),
+                        );
+                      }
+                      return ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                        itemCount: _buildCards(context).length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 16),
+                        itemBuilder: (context, index) => _buildCards(context)[index],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  List<Widget> _buildCards(BuildContext context) {
+    return [
+      _ActionCard(
+        icon: Icons.library_books_rounded,
+        gradient: AppColors.primaryGradient,
+        title: 'Aspirants',
+        subtitle: 'Mock Tests, Papers, Notes, Videos, Live Classes',
+        onTap: () => Navigator.pushNamed(context, '/exam-management'),
+      ),
+      _ActionCard(
+        icon: Icons.people_alt_rounded,
+        gradient: AppColors.accentGradient,
+        title: 'Students Portal',
+        subtitle: 'Enrolments, attendance and approvals',
+        onTap: () => Navigator.pushNamed(context, '/student-admin'),
+      ),
+      _ActionCard(
+        icon: Icons.school_rounded,
+        gradient: const LinearGradient(colors: [Color(0xFF00B894), Color(0xFF00CEC9)]),
+        title: 'Academic Flow',
+        subtitle: 'Manage Classes, Subjects and Curriculum',
+        onTap: () => Navigator.pushNamed(context, '/academic-management'),
+      ),
+    ];
+  }
 }
 
-class _DashCard extends StatefulWidget {
+class _ActionCard extends StatefulWidget {
   final IconData icon;
   final LinearGradient gradient;
   final String title;
   final String subtitle;
-  final String? badge;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
-  const _DashCard({
+  const _ActionCard({
     required this.icon,
     required this.gradient,
     required this.title,
     required this.subtitle,
-    this.badge,
-    this.onTap,
+    required this.onTap,
   });
 
   @override
-  State<_DashCard> createState() => _DashCardState();
+  State<_ActionCard> createState() => _ActionCardState();
 }
 
-class _DashCardState extends State<_DashCard> {
-  bool _isHovered = false;
+class _ActionCardState extends State<_ActionCard> {
+  bool _isPressed = false;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.onTap != null ? (_) => setState(() => _isHovered = true) : null,
-      onTapUp: widget.onTap != null ? (_) => setState(() => _isHovered = false) : null,
-      onTapCancel: widget.onTap != null ? () => setState(() => _isHovered = false) : null,
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
       onTap: widget.onTap,
       child: AnimatedScale(
-        scale: _isHovered ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOutBack,
-        child: AnimatedOpacity(
-          opacity: widget.onTap == null ? 0.6 : 1.0,
-          duration: const Duration(milliseconds: 200),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.cardBorder),
-              boxShadow: _isHovered ? [
-                BoxShadow(
-                  color: widget.gradient.colors.first.withOpacity(0.2),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
-                )
-              ] : null,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: widget.gradient,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(widget.icon, color: Colors.white, size: 26),
+        scale: _isPressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _isPressed ? widget.gradient.colors.first.withOpacity(0.3) : AppColors.cardBorder, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(_isPressed ? 0.02 : 0.04),
+                blurRadius: _isPressed ? 10 : 20,
+                offset: Offset(0, _isPressed ? 4 : 8),
+              )
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: widget.gradient,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.gradient.colors.first.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (widget.badge != null) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.warning.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(widget.badge!,
-                              style: GoogleFonts.outfit(
-                                  color: AppColors.warning,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1)),
-                        ),
-                        const SizedBox(height: 4),
-                      ],
-                      Text(widget.title,
-                          style: GoogleFonts.outfit(
-                            color: AppColors.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          )),
-                      const SizedBox(height: 4),
-                      Text(widget.subtitle,
-                          style: GoogleFonts.outfit(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                            height: 1.4,
-                          )),
-                    ],
-                  ),
+                child: Icon(widget.icon, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(widget.title,
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        )),
+                    const SizedBox(height: 4),
+                    Text(widget.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12, height: 1.3)),
+                  ],
                 ),
-                if (widget.onTap != null)
-                  const Icon(Icons.arrow_forward_ios_rounded,
-                      color: AppColors.textMuted, size: 14),
-              ],
-            ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 20),
+            ],
           ),
         ),
       ),

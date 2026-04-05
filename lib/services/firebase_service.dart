@@ -107,7 +107,7 @@ class FirebaseService {
     final uid = currentUser?.uid;
     if (uid == null) return;
     
-    // Save to centralized collection for dashboards (Student & Parent)
+    // Save to centralized collection for dashboards
     await _firestore.collection('student_quiz_results').add({
       'studentId': uid,
       'quizId': quizId,
@@ -173,30 +173,6 @@ class FirebaseService {
       });
       return docs;
     });
-  }
-
-  // ── Fees ──────────────────────────────────────────────────────────────────
-
-  Future<void> addFee(Map<String, dynamic> data) async {
-    await _firestore.collection('fees').add({
-      ...data,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> updateFee(String feeId, Map<String, dynamic> data) async {
-    await _firestore.collection('fees').doc(feeId).update({
-      ...data,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Stream<QuerySnapshot<Map<String, dynamic>>> getFeesStream() {
-    return _firestore.collection('fees').snapshots();
-  }
-
-  Stream<QuerySnapshot<Map<String, dynamic>>> getStudentFeesStream(String studentId) {
-    return _firestore.collection('fees').where('studentId', isEqualTo: studentId).snapshots();
   }
 
   // ── Materials ─────────────────────────────────────────────────────────────

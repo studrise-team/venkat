@@ -87,11 +87,32 @@ class _AttendanceTabState extends State<AttendanceTab> {
           padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
           child: Column(
             children: [
-              Text('Attendance',
-                  style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Attendance',
+                      style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800)),
+                  GestureDetector(
+                    onTap: () {
+                      final dashboard = context.findAncestorStateOfType<State>();
+                      if (dashboard != null && dashboard.runtimeType.toString().contains('Dashboard')) {
+                         (dashboard as dynamic)._confirmLogout(context);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,

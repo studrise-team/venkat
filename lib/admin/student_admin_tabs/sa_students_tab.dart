@@ -51,13 +51,13 @@ class _SAStudentsTabState extends State<SAStudentsTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Student Roster',
+                Text('Student Management',
                     style: GoogleFonts.outfit(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
-                Text('Manage all enrolled students',
+                Text('Manage enrolments and approvals',
                     style: GoogleFonts.outfit(
                         color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 16),
@@ -74,12 +74,12 @@ class _SAStudentsTabState extends State<SAStudentsTab> {
                         setState(() => _query = v.toLowerCase()),
                     style: GoogleFonts.outfit(color: AppColors.textPrimary),
                     decoration: InputDecoration(
-                      hintText: 'Search by name or roll number…',
+                      hintText: 'Search by name or email…',
                       hintStyle: GoogleFonts.outfit(
                           color: AppColors.textMuted, fontSize: 13),
                       border: InputBorder.none,
                       prefixIcon:
-                          const Icon(Icons.search_rounded, size: 20),
+                          const Icon(Icons.search_rounded, size: 20, color: AppColors.textMuted),
                     ),
                   ),
                 ),
@@ -88,7 +88,75 @@ class _SAStudentsTabState extends State<SAStudentsTab> {
           ),
         ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        //Pending Approvals Section
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .where('role', isEqualTo: 'student')
+              .where('isApproved', isEqualTo: false)
+              .snapshots(),
+          builder: (context, snap) {
+            if (!snap.hasData || snap.data!.docs.isEmpty) {
+              return const SliverToBoxAdapter(child: SizedBox.shrink());
+            }
+            final pending = snap.data!.docs;
+            return SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text('${pending.length} PENDING', 
+                            style: GoogleFonts.outfit(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.w800)),
+                        ),
+                        const SizedBox(width: 8),
+                        Text('Approval Requests',
+                            style: GoogleFonts.outfit(
+                                fontSize: 15, fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary)),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 130,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: pending.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (context, i) {
+                        final doc = pending[i];
+                        final d = doc.data() as Map<String, dynamic>;
+                        return _PendingRequestCard(
+                          data: d,
+                          onTap: () => _showStudentDetail(context, doc.id, d),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+            child: Text('All Students',
+                style: GoogleFonts.outfit(
+                    fontSize: 15, fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary)),
+          ),
+        ),
 
         // Student list
         StreamBuilder<QuerySnapshot>(
@@ -99,7 +167,10 @@ class _SAStudentsTabState extends State<SAStudentsTab> {
           builder: (context, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
               return const SliverToBoxAdapter(
-                  child: Center(child: CircularProgressIndicator()));
+                  child: Center(child: Padding(
+                    padding: EdgeInsets.all(40),
+                    child: CircularProgressIndicator(),
+                  )));
             }
             if (snap.hasError) {
               return SliverToBoxAdapter(
@@ -121,22 +192,28 @@ class _SAStudentsTabState extends State<SAStudentsTab> {
                 ),
               );
             }
+            
             var docs = snap.data!.docs.where((doc) {
-              if (_query.isEmpty) return true;
               final d = doc.data() as Map<String, dynamic>;
-              final name =
-                  (d['name'] ?? '').toString().toLowerCase();
-              final roll =
-                  (d['rollNumber'] ?? '').toString().toLowerCase();
-              return name.contains(_query) || roll.contains(_query);
+              if (d['isApproved'] == false) return false;
+
+              if (_query.isEmpty) return true;
+              final name = (d['name'] ?? '').toString().toLowerCase();
+              final email = (d['email'] ?? '').toString().toLowerCase();
+              return name.contains(_query) || email.contains(_query);
             }).toList();
 
-            // Sort in memory to avoid index requirements
             docs.sort((a, b) {
               final an = (a.data() as Map<String, dynamic>)['name'] ?? '';
               final bn = (b.data() as Map<String, dynamic>)['name'] ?? '';
               return an.toString().compareTo(bn.toString());
             });
+
+            if (docs.isEmpty && _query.isNotEmpty) {
+              return const SliverToBoxAdapter(
+                child: Center(child: Text('No matching students found.')),
+              );
+            }
 
             return SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -158,8 +235,52 @@ class _SAStudentsTabState extends State<SAStudentsTab> {
           },
         ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 28)),
+        const SliverToBoxAdapter(child: SizedBox(height: 40)),
       ],
+    );
+  }
+}
+
+class _PendingRequestCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final VoidCallback onTap;
+  const _PendingRequestCard({required this.data, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = data['name'] ?? 'New Student';
+    final className = data['className'] ?? 'Unknown Class';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'S';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 140,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+          boxShadow: [
+             BoxShadow(color: AppColors.error.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))
+          ]
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: AppColors.error.withValues(alpha: 0.1),
+              child: Text(initial, style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: AppColors.error)),
+            ),
+            const SizedBox(height: 10),
+            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textPrimary)),
+            Text(className, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textSecondary)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -172,8 +293,8 @@ class _StudentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = data['name'] ?? 'Student';
-    final roll = data['rollNumber'] ?? '';
-    final grade = data['grade'] ?? '';
+    final email = data['email'] ?? '';
+    final className = data['className'] ?? '';
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'S';
 
     return GestureDetector(
@@ -211,8 +332,8 @@ class _StudentRow extends StatelessWidget {
                           color: AppColors.textPrimary)),
                   Text(
                     [
-                      if (roll.isNotEmpty) 'Roll: $roll',
-                      if (grade.isNotEmpty) 'Grade: $grade',
+                      if (email.isNotEmpty) email,
+                      if (className.isNotEmpty) 'Class: $className',
                     ].join(' • '),
                     style: GoogleFonts.outfit(
                         fontSize: 12, color: AppColors.textSecondary),
@@ -229,29 +350,114 @@ class _StudentRow extends StatelessWidget {
   }
 }
 
-class _StudentDetailSheet extends StatelessWidget {
+class _StudentDetailSheet extends StatefulWidget {
   final String docId;
   final Map<String, dynamic> data;
   const _StudentDetailSheet(
       {required this.docId, required this.data});
 
   @override
+  State<_StudentDetailSheet> createState() => _StudentDetailSheetState();
+}
+
+class _StudentDetailSheetState extends State<_StudentDetailSheet> {
+  bool _processing = false;
+
+  Future<void> _updateApproval(bool approve) async {
+    setState(() => _processing = true);
+    try {
+      if (approve) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.docId)
+            .update({'isApproved': true});
+        if (mounted) Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Student approved successfully!')),
+        );
+      } else {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Reject Student?'),
+            content: const Text('This will remove the registration request.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Reject', style: TextStyle(color: AppColors.error))),
+            ],
+          )
+        );
+        if (confirm == true) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.docId)
+              .delete();
+          if (mounted) Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _processing = false);
+    }
+  }
+
+  void _promoteStudent() async {
+    final classesSnap = await FirebaseFirestore.instance.collection('academic_classes').orderBy('createdAt').get();
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Promote Student', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: classesSnap.docs.length,
+            itemBuilder: (c, i) {
+              final d = classesSnap.docs[i];
+              return ListTile(
+                title: Text(d['name'], style: GoogleFonts.outfit()),
+                onTap: () async {
+                  await FirebaseFirestore.instance.collection('users').doc(widget.docId).update({
+                    'classId': d.id,
+                    'className': d['name'],
+                  });
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (context.mounted) Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Student promoted to ${d['name']}')));
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final name = data['name'] ?? 'Student';
-    final email = data['email'] ?? '';
-    final phone = data['phone'] ?? '';
-    final grade = data['grade'] ?? '';
-    final roll = data['rollNumber'] ?? '';
+    final d = widget.data;
+    final name = d['name'] ?? 'Student';
+    final email = d['email'] ?? '';
+    final phone = d['phone'] ?? '';
+    final className = d['className'] ?? 'Not Assigned';
+    final isApproved = d['isApproved'] ?? false;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
+      height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
-      padding: const EdgeInsets.all(24),
       child: Column(
         children: [
+          const SizedBox(height: 12),
           Container(
             width: 40,
             height: 4,
@@ -261,67 +467,114 @@ class _StudentDetailSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: AppColors.primary.withOpacity(0.12),
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : 'S',
-              style: GoogleFonts.outfit(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(name,
-              style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary)),
-          const SizedBox(height: 4),
-          if (email.isNotEmpty)
-            Text(email,
-                style: GoogleFonts.outfit(
-                    fontSize: 13, color: AppColors.textSecondary)),
-          const SizedBox(height: 20),
           Expanded(
             child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               children: [
-                if (roll.isNotEmpty)
-                  _DetailRow(
-                      icon: Icons.tag_rounded,
-                      label: 'Roll Number',
-                      value: roll),
-                if (grade.isNotEmpty)
-                  _DetailRow(
-                      icon: Icons.school_rounded,
-                      label: 'Grade',
-                      value: grade),
-                if (phone.isNotEmpty)
-                  _DetailRow(
-                      icon: Icons.phone_rounded,
-                      label: 'Phone',
-                      value: phone),
+                Center(
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        child: Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : 'S',
+                          style: GoogleFonts.outfit(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(name,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary)),
+                      if (!isApproved)
+                         Container(
+                           margin: const EdgeInsets.only(top: 8),
+                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                           decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                           child: Text('PENDING APPROVAL', style: GoogleFonts.outfit(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.bold)),
+                         ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 32),
+                _sectionHeader('Academic Info'),
+                _DetailRow(icon: Icons.class_rounded, label: 'Assigned Class', value: className),
+                
+                const SizedBox(height: 20),
+                _sectionHeader('Contact Details'),
+                _DetailRow(icon: Icons.phone_rounded, label: 'Student Phone', value: phone.isNotEmpty ? phone : 'Not Specified'),
+                _DetailRow(icon: Icons.email_rounded, label: 'Email Address', value: email.isNotEmpty ? email : 'Not Specified'),
 
-                const SizedBox(height: 16),
-                Text('Fee Status (Current Month)',
-                    style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
-                _FeeSummaryRow(studentId: docId),
-
-                // Link parent section
-                const SizedBox(height: 16),
-                Text('Parent Link',
-                    style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
-                _LinkParentButton(
-                    studentDocId: docId, studentData: data),
+                const SizedBox(height: 20),
+                _sectionHeader('Account Actions'),
+                if (!isApproved) ...[
+                   const SizedBox(height: 12),
+                   Row(
+                     children: [
+                       Expanded(
+                         child: _actionButton(
+                           label: 'Reject',
+                           color: AppColors.error,
+                           onTap: () => _updateApproval(false),
+                           isOutlined: true,
+                         ),
+                       ),
+                       const SizedBox(width: 12),
+                       Expanded(
+                         child: _actionButton(
+                           label: 'Approve',
+                           color: AppColors.success,
+                           onTap: () => _updateApproval(true),
+                         ),
+                       ),
+                     ],
+                   ),
+                ] else ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _actionButton(
+                            label: 'Promote Student',
+                            color: AppColors.primary,
+                            onTap: _promoteStudent,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _actionButton(
+                            label: 'Delete Student',
+                            color: AppColors.error,
+                            onTap: () async {
+                               final confirm = await showDialog<bool>(
+                                 context: context,
+                                 builder: (ctx) => AlertDialog(
+                                   title: const Text('Delete Student Account?'),
+                                   content: const Text('This will permanently remove the student and all their data. This action cannot be undone.'),
+                                   actions: [
+                                     TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                     TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete Permanently', style: TextStyle(color: AppColors.error))),
+                                   ],
+                                 )
+                               );
+                               if (confirm == true) {
+                                  setState(() => _processing = true);
+                                  await FirebaseFirestore.instance.collection('users').doc(widget.docId).delete();
+                                  if (mounted) Navigator.pop(context);
+                               }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -329,63 +582,27 @@ class _StudentDetailSheet extends StatelessWidget {
       ),
     );
   }
-}
 
-class _FeeSummaryRow extends StatelessWidget {
-  final String studentId;
-  const _FeeSummaryRow({required this.studentId});
+  Widget _sectionHeader(String title) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Text(title.toUpperCase(), style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.textMuted, letterSpacing: 1.2)),
+  );
 
-  @override
-  Widget build(BuildContext context) {
-    final monthKey = DateFormat('yyyy-MM').format(DateTime.now());
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('fees')
-          .doc(studentId)
-          .collection('months')
-          .doc(monthKey)
-          .snapshots(),
-      builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: LinearProgressIndicator());
-        }
-        
-        bool exists = snap.data?.exists ?? false;
-        String status = 'Pending';
-        String amount = '—';
-        bool isPaid = false;
-        
-        if (exists) {
-           final d = snap.data!.data() as Map<String, dynamic>;
-           status = d['status'] ?? 'Pending';
-           amount = d['amount'] ?? '—';
-           isPaid = status.toLowerCase() == 'paid';
-        }
-        
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isPaid ? AppColors.success.withOpacity(0.1) : AppColors.warning.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isPaid ? AppColors.success.withOpacity(0.2) : AppColors.warning.withOpacity(0.2)),
-          ),
-          child: Row(
-            children: [
-              Icon(isPaid ? Icons.check_circle_rounded : Icons.pending_rounded, color: isPaid ? AppColors.success : AppColors.warning, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('STATUS: ${status.toUpperCase()}', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: isPaid ? AppColors.success : AppColors.warning)),
-                    Text('Amount: ₹$amount', style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textSecondary)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+  Widget _actionButton({required String label, required Color color, required VoidCallback onTap, bool isOutlined = false}) {
+    return GestureDetector(
+      onTap: _processing ? null : onTap,
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: isOutlined ? Colors.transparent : color,
+          borderRadius: BorderRadius.circular(12),
+          border: isOutlined ? Border.all(color: color, width: 1.5) : null,
+        ),
+        alignment: Alignment.center,
+        child: _processing
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Text(label, style: GoogleFonts.outfit(color: isOutlined ? color : Colors.white, fontWeight: FontWeight.w700)),
+      ),
     );
   }
 }
@@ -426,111 +643,6 @@ class _DetailRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _LinkParentButton extends StatefulWidget {
-  final String studentDocId;
-  final Map<String, dynamic> studentData;
-  const _LinkParentButton(
-      {required this.studentDocId, required this.studentData});
-
-  @override
-  State<_LinkParentButton> createState() => _LinkParentButtonState();
-}
-
-class _LinkParentButtonState extends State<_LinkParentButton> {
-  final _ctrl = TextEditingController();
-  bool _loading = false;
-  String? _msg;
-
-  Future<void> _link() async {
-    final parentEmail = _ctrl.text.trim();
-    if (parentEmail.isEmpty) return;
-    setState(() {
-      _loading = true;
-      _msg = null;
-    });
-    try {
-      final q = await FirebaseFirestore.instance
-          .collection('users')
-          .where('email', isEqualTo: parentEmail)
-          .where('role', isEqualTo: 'parent')
-          .limit(1)
-          .get();
-      if (q.docs.isEmpty) {
-        setState(() => _msg = 'Parent account not found.');
-        return;
-      }
-      final parentId = q.docs.first.id;
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.studentDocId)
-          .update({'parentUid': parentId});
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(parentId)
-          .update({'childUid': widget.studentDocId});
-      setState(() => _msg = '✅ Parent linked successfully!');
-    } catch (e) {
-      setState(() => _msg = 'Error: $e');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TextField(
-          controller: _ctrl,
-          style: GoogleFonts.outfit(color: AppColors.textPrimary),
-          decoration: InputDecoration(
-            labelText: "Parent's Email",
-            prefixIcon: const Icon(Icons.email_rounded,
-                color: AppColors.textMuted, size: 18),
-            filled: true,
-            fillColor: AppColors.cardLight,
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
-          ),
-        ),
-        const SizedBox(height: 10),
-        GestureDetector(
-          onTap: _loading ? null : _link,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            alignment: Alignment.center,
-            child: _loading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2))
-                : Text('Link Parent',
-                    style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600)),
-          ),
-        ),
-        if (_msg != null) ...[
-          const SizedBox(height: 8),
-          Text(_msg!,
-              style: GoogleFonts.outfit(
-                  color: _msg!.startsWith('✅')
-                      ? AppColors.success
-                      : AppColors.error,
-                  fontSize: 13)),
-        ],
-      ],
     );
   }
 }

@@ -149,59 +149,63 @@ class _ExamManagementScreenState extends State<ExamManagementScreen> {
                             letterSpacing: 1,
                           )),
                       const SizedBox(height: 12),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 1.1,
-                        ),
-                        itemCount: _exams.length,
-                        itemBuilder: (_, i) {
-                          final e = _exams[i];
-                          final selected = _selectedExam == e;
-                          return GestureDetector(
-                            onTap: () => setState(() => _selectedExam = e),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              decoration: BoxDecoration(
-                                gradient: selected
-                                    ? AppColors.primaryGradient
-                                    : null,
-                                color: selected ? null : AppColors.card,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: selected
-                                      ? Colors.transparent
-                                      : AppColors.cardBorder,
-                                ),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    _examIcons[e] ?? Icons.book_rounded,
-                                    color: selected
-                                        ? Colors.white
-                                        : AppColors.primary,
-                                    size: 26,
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final crossAxisCount = constraints.maxWidth > 600 ? 5 : 3;
+                          return GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: constraints.maxWidth > 600 ? 1.4 : 1.1,
+                            ),
+                            itemCount: _exams.length,
+                            itemBuilder: (_, i) {
+                              final e = _exams[i];
+                              final selected = _selectedExam == e;
+                              return GestureDetector(
+                                onTap: () => setState(() => _selectedExam = e),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  decoration: BoxDecoration(
+                                    gradient: selected
+                                        ? AppColors.primaryGradient
+                                        : null,
+                                    color: selected ? null : AppColors.card,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: selected
+                                          ? Colors.transparent
+                                          : AppColors.cardBorder,
+                                    ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(e,
-                                      style: GoogleFonts.outfit(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _examIcons[e] ?? Icons.book_rounded,
                                         color: selected
                                             ? Colors.white
-                                            : AppColors.textSecondary,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
+                                            : AppColors.primary,
+                                        size: 26,
                                       ),
-                                      textAlign: TextAlign.center),
-                                ],
-                              ),
-                            ),
+                                      const SizedBox(height: 6),
+                                      Text(e,
+                                          style: GoogleFonts.outfit(
+                                            color: selected
+                                                ? Colors.white
+                                                : AppColors.textSecondary,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          textAlign: TextAlign.center),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           );
                         },
                       ),
