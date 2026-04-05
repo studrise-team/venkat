@@ -5,6 +5,57 @@ import '../app_theme.dart';
 import '../services/firebase_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Snackbar helper
+// ─────────────────────────────────────────────────────────────────────────────
+enum AdminSnackType { success, error, warning }
+
+void showAdminSnackBar(
+  BuildContext context,
+  String message, {
+  AdminSnackType type = AdminSnackType.success,
+}) {
+  Color color;
+  IconData icon;
+  if (type == AdminSnackType.error) {
+    color = AppColors.error;
+    icon = Icons.error_outline;
+  } else if (type == AdminSnackType.warning) {
+    color = const Color(0xFFFFB300);
+    icon = Icons.warning_amber_rounded;
+  } else {
+    color = const Color(0xFF00C896);
+    icon = Icons.check_circle_outline;
+  }
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  if (messenger == null) return;
+  messenger
+    ..clearSnackBars()
+    ..showSnackBar(
+      SnackBar(
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        duration: const Duration(seconds: 3),
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(message,
+                  style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Generic CRUD Page scaffold
 // ─────────────────────────────────────────────────────────────────────────────
 class AdminCrudPage extends StatelessWidget {
@@ -278,34 +329,43 @@ class AdminFormSheet extends StatelessWidget {
             ...fields.map((f) =>
                 Padding(padding: const EdgeInsets.only(bottom: 14), child: f)),
             const SizedBox(height: 8),
-            GestureDetector(
-              onTap: isLoading ? null : onSave,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (isLoading)
-                      const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                    else
-                      const Icon(Icons.save_rounded,
-                          color: Colors.white, size: 20),
-                    const SizedBox(width: 10),
-                    Text(isLoading ? 'Saving…' : 'Save',
-                        style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15)),
-                  ],
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Material(
+                color: Colors.transparent,
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: InkWell(
+                    onTap: isLoading ? null : onSave,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (isLoading)
+                            const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
+                          else
+                            const Icon(Icons.save_rounded,
+                                color: Colors.white, size: 20),
+                          const SizedBox(width: 10),
+                          Text(isLoading ? 'Saving…' : 'Save',
+                              style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

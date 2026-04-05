@@ -123,10 +123,13 @@ class _NotesFormState extends State<_NotesForm> {
   }
 
   Future<void> _save() async {
-    if (_topicCtrl.text.trim().isEmpty) return;
+    if (_topicCtrl.text.trim().isEmpty) {
+      showAdminSnackBar(context, 'Topic is required.', type: AdminSnackType.warning);
+      return;
+    }
     setState(() => _loading = true);
     try {
-      final payload = {
+      final Map<String, dynamic> payload = {
         'exam': widget.exam,
         'subject': _subjectCtrl.text.trim(),
         'topic': _topicCtrl.text.trim(),
@@ -139,7 +142,14 @@ class _NotesFormState extends State<_NotesForm> {
       } else {
         await FirebaseService().addDocument('notes', payload);
       }
-      widget.onSave();
+      if (mounted) {
+        showAdminSnackBar(context, 'Notes saved successfully!');
+        widget.onSave();
+      }
+    } catch (e) {
+      if (mounted) {
+        showAdminSnackBar(context, 'Error saving: $e', type: AdminSnackType.error);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

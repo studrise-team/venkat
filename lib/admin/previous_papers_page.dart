@@ -136,10 +136,13 @@ class _PaperFormState extends State<_PaperForm> {
   }
 
   Future<void> _save() async {
-    if (_topicCtrl.text.trim().isEmpty) return;
+    if (_topicCtrl.text.trim().isEmpty) {
+      showAdminSnackBar(context, 'Topic is required.', type: AdminSnackType.warning);
+      return;
+    }
     setState(() => _loading = true);
     try {
-      final payload = {
+      final Map<String, dynamic> payload = {
         'exam': widget.exam,
         'year': _yearCtrl.text.trim(),
         'subject': _subjectCtrl.text.trim(),
@@ -153,7 +156,14 @@ class _PaperFormState extends State<_PaperForm> {
       } else {
         await FirebaseService().addDocument('previous_papers', payload);
       }
-      widget.onSave();
+      if (mounted) {
+        showAdminSnackBar(context, 'Previous Paper saved successfully!');
+        widget.onSave();
+      }
+    } catch (e) {
+      if (mounted) {
+        showAdminSnackBar(context, 'Error saving: $e', type: AdminSnackType.error);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

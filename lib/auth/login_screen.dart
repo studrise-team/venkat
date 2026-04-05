@@ -10,27 +10,15 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _LoginScreenState extends State<LoginScreen> {
   final _usernameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscure = true;
   bool _loading = false;
   String? _error;
 
-  // Tabs: 0 = Aspirant, 1 = Student
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() => setState(() => _error = null));
-  }
-
   @override
   void dispose() {
-    _tabController.dispose();
     _usernameCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
@@ -91,168 +79,196 @@ class _LoginScreenState extends State<LoginScreen>
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.bgGradient),
         child: SafeArea(
-          child: Column(
-            children: [
-              // ── Top bar ──────────────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 16, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
                       children: [
-                        Text('Astar Learning',
-                            style: GoogleFonts.outfit(
-                              color: AppColors.textPrimary,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                            )),
-                        Text('Your success partner',
-                            style: GoogleFonts.outfit(
-                              color: AppColors.textSecondary,
-                              fontSize: 13,
-                            )),
+                        // ── Top bar ──────────────────────────────────────────────────
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 20, 16, 0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Astar Learning',
+                                      style: GoogleFonts.outfit(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w800,
+                                      )),
+                                  Text('Your success partner',
+                                      style: GoogleFonts.outfit(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 13,
+                                      )),
+                                ],
+                              ),
+                              GestureDetector(
+                                onTap: _showAdminLogin,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 9),
+                                  decoration: BoxDecoration(
+                                    gradient: AppColors.primaryGradient,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.admin_panel_settings_rounded,
+                                          color: Colors.white, size: 16),
+                                      const SizedBox(width: 6),
+                                      Text('Admin',
+                                          style: GoogleFonts.outfit(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // ── Logo ─────────────────────────────────────────────────────
+                        SizedBox(
+                          height: 100,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(50),
+                            child: Image.asset('assets/logo.png', fit: BoxFit.contain),
+                          ),
+                        ),
+
+                        // This pushes everything below to the bottom/middle!
+                        const Spacer(),
+
+                        const SizedBox(height: 10),
+
+                        // ── Form (Animated & Modern) ──────────────────────────────
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 800),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, value, child) {
+                              return Transform.translate(
+                                offset: Offset(0, 40 * (1 - value)),
+                                child: Opacity(
+                                  opacity: value,
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface, // Clean card inside the gradient background
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: AppColors.cardBorder, width: 1.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 12),
+                                  )
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Welcome Back',
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Enter your details to sign in',
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  _InputField(
+                                    controller: _usernameCtrl,
+                                    label: 'Username / Email',
+                                    icon: Icons.person_rounded,
+                                    onChanged: (_) => setState(() => _error = null),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _InputField(
+                                    controller: _passCtrl,
+                                    label: 'Password',
+                                    icon: Icons.lock_rounded,
+                                    obscure: _obscure,
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscure
+                                            ? Icons.visibility_rounded
+                                            : Icons.visibility_off_rounded,
+                                        color: AppColors.textMuted,
+                                      ),
+                                      onPressed: () =>
+                                          setState(() => _obscure = !_obscure),
+                                    ),
+                                    onChanged: (_) => setState(() => _error = null),
+                                  ),
+                                  if (_error != null) ...[
+                                    const SizedBox(height: 14),
+                                    _ErrorBanner(message: _error!),
+                                  ],
+                                  const SizedBox(height: 24),
+                                  _GradientButton(
+                                    label: _loading ? 'Signing in…' : 'Sign In',
+                                    icon: Icons.login_rounded,
+                                    isLoading: _loading,
+                                    onTap: _login,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text("Don't have an account? ",
+                                          style: GoogleFonts.outfit(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 14)),
+                                      GestureDetector(
+                                        onTap: () =>
+                                            Navigator.pushNamed(context, '/register'),
+                                        child: Text('Register',
+                                            style: GoogleFonts.outfit(
+                                              color: AppColors.primary,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            )),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
                       ],
                     ),
-                    GestureDetector(
-                      onTap: _showAdminLogin,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 9),
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.admin_panel_settings_rounded,
-                                color: Colors.white, size: 16),
-                            const SizedBox(width: 6),
-                            Text('Admin',
-                                style: GoogleFonts.outfit(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              // ── Logo ─────────────────────────────────────────────────────
-              SizedBox(
-                height: 100,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
-                  child: Image.asset('assets/logo.png', fit: BoxFit.contain),
-                ),
-              ),
-              const SizedBox(height: 22),
-
-              // ── Tab bar ──────────────────────────────────────────────────
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 24),
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.cardBorder),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  dividerColor: Colors.transparent,
-                  labelStyle:
-                      GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14),
-                  unselectedLabelStyle: GoogleFonts.outfit(fontSize: 14),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: AppColors.textSecondary,
-                  tabs: const [
-                    Tab(text: 'Aspirant'),
-                    Tab(text: 'Student'),
-                  ],
-                ),
-              ),
-
-
-              const SizedBox(height: 20),
-
-              // ── Form ─────────────────────────────────────────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      _InputField(
-                        controller: _usernameCtrl,
-                        label: 'Username / Email',
-                        icon: Icons.person_rounded,
-                        onChanged: (_) => setState(() => _error = null),
-                      ),
-                      const SizedBox(height: 14),
-                      _InputField(
-                        controller: _passCtrl,
-                        label: 'Password',
-                        icon: Icons.lock_rounded,
-                        obscure: _obscure,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_rounded
-                                : Icons.visibility_off_rounded,
-                            color: AppColors.textMuted,
-                          ),
-                          onPressed: () =>
-                              setState(() => _obscure = !_obscure),
-                        ),
-                        onChanged: (_) => setState(() => _error = null),
-                      ),
-                      if (_error != null) ...[
-                        const SizedBox(height: 14),
-                        _ErrorBanner(message: _error!),
-                      ],
-                      const SizedBox(height: 24),
-                      _GradientButton(
-                        label: _loading ? 'Signing in…' : 'Sign In',
-                        icon: Icons.login_rounded,
-                        isLoading: _loading,
-                        onTap: _login,
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text("Don't have an account? ",
-                              style: GoogleFonts.outfit(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 14)),
-                          GestureDetector(
-                            onTap: () =>
-                                Navigator.pushNamed(context, '/register'),
-                            child: Text('Register',
-                                style: GoogleFonts.outfit(
-                                  color: AppColors.primary,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                )),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                    ],
                   ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),

@@ -116,8 +116,9 @@ class _QuizScreenState extends State<QuizScreen> {
           children: [
             // ---- Top bar ----
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
                     onTap: () => _confirmExit(context),
@@ -126,64 +127,78 @@ class _QuizScreenState extends State<QuizScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.card,
                         borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.cardBorder),
                       ),
                       child: const Icon(Icons.close_rounded,
                           color: AppColors.textSecondary, size: 20),
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _timeLeft <= 5 ? AppColors.error.withValues(alpha: 0.2) : AppColors.cardLight,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _timeLeft <= 5 ? AppColors.error : AppColors.accent.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Question ${idx + 1} of $total',
-                              style: GoogleFonts.outfit(
-                                  color: AppColors.textSecondary, fontSize: 13),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _timeLeft <= 5 ? AppColors.error.withValues(alpha: 0.2) : AppColors.cardLight,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: _timeLeft <= 5 ? AppColors.error : AppColors.accent.withValues(alpha: 0.3)),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.timer_outlined, 
-                                    size: 14, 
-                                    color: _timeLeft <= 5 ? AppColors.error : AppColors.accent),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '00:${_timeLeft.toString().padLeft(2, "0")}',
-                                    style: GoogleFonts.outfit(
-                                        color: _timeLeft <= 5 ? AppColors.error : AppColors.accent, 
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: AppColors.card,
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                                AppColors.primary),
-                            minHeight: 6,
-                          ),
+                        Icon(Icons.timer_outlined, 
+                          size: 16, 
+                          color: _timeLeft <= 5 ? AppColors.error : AppColors.accent),
+                        const SizedBox(width: 6),
+                        Text(
+                          '00:${_timeLeft.toString().padLeft(2, "0")}',
+                          style: GoogleFonts.outfit(
+                              color: _timeLeft <= 5 ? AppColors.error : AppColors.accent, 
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14),
                         ),
                       ],
                     ),
                   ),
                 ],
+              ),
+            ),
+
+            // ---- Question Numbers Bar ----
+            Container(
+              height: 44,
+              margin: const EdgeInsets.only(bottom: 5),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: total,
+                itemBuilder: (context, i) {
+                  final isCurrent = i == idx;
+                  final answered = provider.selectedAnswers.containsKey(i);
+                  final Color color = answered ? AppColors.success : AppColors.warning;
+                  return GestureDetector(
+                    onTap: () => provider.jumpToQuestion(i),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      margin: const EdgeInsets.only(right: 10),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: isCurrent ? 1.0 : 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: color,
+                          width: isCurrent ? 2 : 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${i + 1}',
+                          style: GoogleFonts.outfit(
+                            color: isCurrent ? Colors.white : color,
+                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
 
@@ -263,70 +278,86 @@ class _QuizScreenState extends State<QuizScreen> {
         border:
             Border(top: BorderSide(color: AppColors.cardBorder)),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Previous
-          if (!isFirst)
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: provider.previousQuestion,
-                icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                label: Text('Prev',
-                    style: GoogleFonts.outfit(fontSize: 14)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
-                  side: BorderSide(color: AppColors.cardBorder),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+          Row(
+            children: [
+              // Previous
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: isFirst ? null : provider.previousQuestion,
+                  icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                  label: Text('Prev',
+                      style: GoogleFonts.outfit(fontSize: 14)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    side: BorderSide(color: isFirst ? Colors.transparent : AppColors.cardBorder),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                 ),
               ),
-            ),
-          if (!isFirst) const SizedBox(width: 12),
-
-          // Next / Submit
-          Expanded(
-            flex: 2,
-            child: GestureDetector(
-              onTap: () {
-                if (isLast) {
-                  if (allAnswered) {
-                    _timer?.cancel();
-                    provider.submitQuiz();
-                    Navigator.pushReplacementNamed(context, '/result');
-                  } else {
-                    _showSubmitDialog(context, provider);
-                  }
-                } else {
-                  provider.nextQuestion();
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(12),
+              const SizedBox(width: 12),
+              // Next
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: isLast ? null : provider.nextQuestion,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: isLast ? Colors.transparent : AppColors.primary.withValues(alpha: 0.5)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Next',
+                          style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.arrow_forward_rounded, size: 16),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      isLast ? 'Submit Quiz' : 'Next',
-                      style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(
-                      isLast
-                          ? Icons.check_circle_rounded
-                          : Icons.arrow_forward_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ],
-                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Submit Quiz (Always Available)
+          GestureDetector(
+            onTap: () {
+              if (allAnswered) {
+                _timer?.cancel();
+                provider.submitQuiz();
+                Navigator.pushReplacementNamed(context, '/result');
+              } else {
+                _showSubmitDialog(context, provider);
+              }
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Submit Quiz',
+                    style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.check_circle_rounded,
+                      color: Colors.white, size: 18),
+                ],
               ),
             ),
           ),
@@ -354,8 +385,7 @@ class _QuizScreenState extends State<QuizScreen> {
             onPressed: () {
               _timer?.cancel();
               Navigator.pop(context);
-              Navigator.pushNamedAndRemoveUntil(
-                  context, '/', (_) => false);
+              Navigator.pop(context); // Properly close quiz without splashing
             },
             child: Text('Exit',
                 style: GoogleFonts.outfit(color: AppColors.error)),

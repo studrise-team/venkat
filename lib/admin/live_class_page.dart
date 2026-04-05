@@ -153,10 +153,13 @@ class _LiveFormState extends State<_LiveForm> {
   }
 
   Future<void> _save() async {
-    if (_titleCtrl.text.trim().isEmpty) return;
+    if (_titleCtrl.text.trim().isEmpty) {
+      showAdminSnackBar(context, 'Class title is required.', type: AdminSnackType.warning);
+      return;
+    }
     setState(() => _loading = true);
     try {
-      final payload = {
+      final Map<String, dynamic> payload = {
         'exam': widget.exam,
         'title': _titleCtrl.text.trim(),
         'date': _dateCtrl.text.trim(),
@@ -170,7 +173,14 @@ class _LiveFormState extends State<_LiveForm> {
       } else {
         await FirebaseService().addDocument('live_classes', payload);
       }
-      widget.onSave();
+      if (mounted) {
+        showAdminSnackBar(context, 'Live Class saved successfully!');
+        widget.onSave();
+      }
+    } catch (e) {
+      if (mounted) {
+        showAdminSnackBar(context, 'Error saving: $e', type: AdminSnackType.error);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -236,32 +246,43 @@ class _LiveFormState extends State<_LiveForm> {
             const SizedBox(height: 14),
             AdminSheetField(controller: _descCtrl, label: 'Description', icon: Icons.info_outline_rounded, hint: 'What will be covered', maxLines: 3),
             const SizedBox(height: 20),
-            GestureDetector(
-              onTap: _loading ? null : _save,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                decoration: BoxDecoration(
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Material(
+                color: Colors.transparent,
+                child: Ink(
+                  decoration: BoxDecoration(
                     gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(14)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (_loading)
-                      const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                    else
-                      const Icon(Icons.save_rounded, color: Colors.white, size: 20),
-                    const SizedBox(width: 10),
-                    Text(_loading ? 'Saving…' : 'Save',
-                        style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15)),
-                  ],
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: InkWell(
+                    onTap: _loading ? null : _save,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_loading)
+                            const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
+                          else
+                            const Icon(Icons.save_rounded,
+                                color: Colors.white, size: 20),
+                          const SizedBox(width: 10),
+                          Text(_loading ? 'Saving…' : 'Save',
+                              style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

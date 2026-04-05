@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../app_theme.dart';
 import '../services/firebase_service.dart';
+import '../screens/video_class_player_page.dart';
 
 class VideoView extends StatelessWidget {
   final String exam;
@@ -64,7 +66,7 @@ class VideoView extends StatelessWidget {
                         final data = docs[i].data();
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: _VideoCard(doc: data),
+                          child: _VideoCard(doc: data, exam: exam),
                         );
                       },
                     );
@@ -81,7 +83,8 @@ class VideoView extends StatelessWidget {
 
 class _VideoCard extends StatelessWidget {
   final Map<String, dynamic> doc;
-  const _VideoCard({required this.doc});
+  final String exam;
+  const _VideoCard({required this.doc, required this.exam});
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +100,7 @@ class _VideoCard extends StatelessWidget {
         children: [
           // Thumbnail area
           GestureDetector(
-            onTap: () => _launchUrl(doc['link'] ?? ''),
+            onTap: () => _handleTap(context, doc, doc['link'] ?? '', isYouTube),
             child: Container(
               height: 160,
               decoration: BoxDecoration(
@@ -157,7 +160,7 @@ class _VideoCard extends StatelessWidget {
                 ],
                 const SizedBox(height: 12),
                 GestureDetector(
-                  onTap: () => _launchUrl(doc['link'] ?? ''),
+                  onTap: () => _handleTap(context, doc, doc['link'] ?? '', isYouTube),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 11),
@@ -184,6 +187,26 @@ class _VideoCard extends StatelessWidget {
         ],
       ),
     );
+  }
+  void _handleTap(BuildContext context, Map<String, dynamic> doc, String url, bool isYouTube) {
+    if (url.isEmpty) return;
+    if (isYouTube) {
+      final videoId = YoutubePlayer.convertUrlToId(url);
+      if (videoId != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VideoClassPlayerPage(
+              activeVideo: doc,
+              collection: 'video_classes',
+              exam: exam,
+            ),
+          ),
+        );
+        return;
+      }
+    }
+    _launchUrl(url);
   }
 }
 

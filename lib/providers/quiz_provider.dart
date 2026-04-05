@@ -162,6 +162,13 @@ class QuizProvider extends ChangeNotifier {
     }
   }
 
+  void jumpToQuestion(int index) {
+    if (index >= 0 && index < _questions.length) {
+      _currentIndex = index;
+      notifyListeners();
+    }
+  }
+
   void previousQuestion() {
     if (_currentIndex > 0) {
       _currentIndex--;

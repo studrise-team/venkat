@@ -160,8 +160,7 @@ class ResultScreen extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: () {
                         provider.reset();
-                        Navigator.pushNamedAndRemoveUntil(
-                            context, '/', (_) => false);
+                        Navigator.popUntil(context, (route) => route.isFirst);
                       },
                       icon: const Icon(Icons.home_rounded,
                           color: AppColors.textSecondary),

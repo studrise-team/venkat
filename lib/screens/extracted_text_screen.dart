@@ -266,7 +266,7 @@ class _ExtractedTextScreenState extends State<ExtractedTextScreen> {
         duration: const Duration(seconds: 3),
       ),
     );
-    Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+    Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   // ── Local regex fallback ──────────────────────────────────────────────────

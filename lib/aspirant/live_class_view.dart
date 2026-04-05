@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../app_theme.dart';
 import '../services/firebase_service.dart';
+import '../screens/video_class_player_page.dart';
 
 class LiveClassView extends StatelessWidget {
   final String exam;
@@ -67,7 +69,7 @@ class LiveClassView extends StatelessWidget {
                         final data = docs[i].data();
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: _LiveCard(doc: data),
+                          child: _LiveCard(doc: data, exam: exam),
                         );
                       },
                     );
@@ -84,7 +86,8 @@ class LiveClassView extends StatelessWidget {
 
 class _LiveCard extends StatelessWidget {
   final Map<String, dynamic> doc;
-  const _LiveCard({required this.doc});
+  final String exam;
+  const _LiveCard({required this.doc, required this.exam});
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +137,7 @@ class _LiveCard extends StatelessWidget {
                 ],
                 const SizedBox(height: 14),
                 GestureDetector(
-                  onTap: () => _launchUrl(doc['youtubeLink'] ?? ''),
+                  onTap: () => _handleTap(context, doc, doc['youtubeLink'] ?? ''),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -161,6 +164,24 @@ class _LiveCard extends StatelessWidget {
         ],
       ),
     );
+  }
+  void _handleTap(BuildContext context, Map<String, dynamic> doc, String url) {
+    if (url.isEmpty) return;
+    final videoId = YoutubePlayer.convertUrlToId(url);
+    if (videoId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => VideoClassPlayerPage(
+            activeVideo: doc,
+            collection: 'live_classes',
+            exam: exam,
+          ),
+        ),
+      );
+      return;
+    }
+    _launchUrl(url);
   }
 }
 

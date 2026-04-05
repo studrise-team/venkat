@@ -87,9 +87,26 @@ class QuizListView extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: GestureDetector(
-                            onTap: () {
-                              context.read<QuizProvider>().loadQuestionsFromFirestore(doc.id, qTitle);
-                              Navigator.pushNamed(context, '/quiz');
+                            onTap: () async {
+                              final provider = context.read<QuizProvider>();
+                              
+                              // Show generic loading if we don't want to rely solely on QuizScreen's loading state
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                              );
+
+                              try {
+                                await provider.loadQuestionsFromFirestore(doc.id, qTitle, collection: collection);
+                                if (!context.mounted) return;
+                                Navigator.pop(context); // hide loading
+                                Navigator.pushNamed(context, '/quiz');
+                              } catch (e) {
+                                if (!context.mounted) return;
+                                Navigator.pop(context); // hide loading
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load quiz: $e')));
+                              }
                             },
                             child: Container(
                               padding: const EdgeInsets.all(18),

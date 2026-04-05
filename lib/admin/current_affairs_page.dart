@@ -120,11 +120,12 @@ class _CAFormState extends State<_CAForm> {
 
   Future<void> _save() async {
     if (_titleCtrl.text.trim().isEmpty) {
+      showAdminSnackBar(context, 'Title is required.', type: AdminSnackType.warning);
       return;
     }
     setState(() => _loading = true);
     try {
-      final payload = {
+      final Map<String, dynamic> payload = {
         'exam': widget.exam,
         'title': _titleCtrl.text.trim(),
         'date': _dateCtrl.text.trim(),
@@ -137,7 +138,14 @@ class _CAFormState extends State<_CAForm> {
       } else {
         await FirebaseService().addDocument('current_affairs', payload);
       }
-      widget.onSave();
+      if (mounted) {
+        showAdminSnackBar(context, 'Current Affairs saved successfully!');
+        widget.onSave();
+      }
+    } catch (e) {
+      if (mounted) {
+        showAdminSnackBar(context, 'Error saving: $e', type: AdminSnackType.error);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

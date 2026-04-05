@@ -3,8 +3,9 @@ import 'package:http/http.dart' as http;
 import '../models/question_model.dart';
 
 class ApiService {
-  // Configured to use your PC's actual local IPv4 address instead of the emulator's localhost loopback.
-  static const String _baseUrl = 'http://172.23.112.1:8000';
+  // Production backend deployed on Render
+  static const String _baseUrl = 'https://astar-ai-backend-1ps9.onrender.com';
+  static const _timeout = Duration(seconds: 90);
 
   /// Send raw OCR text to backend; get back parsed MCQ list.
   Future<List<QuestionModel>> parseQuestions(String rawText) async {
@@ -12,7 +13,8 @@ class ApiService {
       Uri.parse('$_baseUrl/mcq/parse'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'text': rawText}),
-    );
+    ).timeout(_timeout, onTimeout: () => throw Exception(
+        'Request timed out. Make sure the backend is running with: uvicorn main:app --reload --host 0.0.0.0'));
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -28,7 +30,8 @@ class ApiService {
       Uri.parse('$_baseUrl/mcq/generate'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'text': theoryText}),
-    );
+    ).timeout(_timeout, onTimeout: () => throw Exception(
+        'AI request timed out. Make sure the backend is running with: uvicorn main:app --reload --host 0.0.0.0'));
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -57,7 +60,8 @@ class ApiService {
       Uri.parse('$_baseUrl/mcq/translate'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'mcqs': payload}),
-    );
+    ).timeout(_timeout, onTimeout: () => throw Exception(
+        'Translation timed out. Make sure backend is reachable.'));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

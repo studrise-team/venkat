@@ -155,10 +155,17 @@ class _VideoFormState extends State<_VideoForm> {
   }
 
   Future<void> _save() async {
-    if (_topicCtrl.text.trim().isEmpty || _linkCtrl.text.trim().isEmpty) return;
+    if (_topicCtrl.text.trim().isEmpty) {
+      showAdminSnackBar(context, 'Topic is required.', type: AdminSnackType.warning);
+      return;
+    }
+    if (_linkCtrl.text.trim().isEmpty) {
+      showAdminSnackBar(context, 'Video link is required.', type: AdminSnackType.warning);
+      return;
+    }
     setState(() => _loading = true);
     try {
-      final payload = {
+      final Map<String, dynamic> payload = {
         'exam': widget.exam,
         'subject': _subjectCtrl.text.trim(),
         'topic': _topicCtrl.text.trim(),
@@ -172,7 +179,14 @@ class _VideoFormState extends State<_VideoForm> {
       } else {
         await FirebaseService().addDocument('video_classes', payload);
       }
-      widget.onSave();
+      if (mounted) {
+        showAdminSnackBar(context, 'Video Class saved successfully!');
+        widget.onSave();
+      }
+    } catch (e) {
+      if (mounted) {
+        showAdminSnackBar(context, 'Error saving: $e', type: AdminSnackType.error);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -249,33 +263,43 @@ class _VideoFormState extends State<_VideoForm> {
                   : 'https://drive.google.com/...',
             ),
             const SizedBox(height: 20),
-            GestureDetector(
-              onTap: _loading ? null : _save,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                decoration: BoxDecoration(
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Material(
+                color: Colors.transparent,
+                child: Ink(
+                  decoration: BoxDecoration(
                     gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(14)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (_loading)
-                      const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                    else
-                      const Icon(Icons.save_rounded,
-                          color: Colors.white, size: 20),
-                    const SizedBox(width: 10),
-                    Text(_loading ? 'Saving…' : 'Save',
-                        style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15)),
-                  ],
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: InkWell(
+                    onTap: _loading ? null : _save,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_loading)
+                            const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
+                          else
+                            const Icon(Icons.save_rounded,
+                                color: Colors.white, size: 20),
+                          const SizedBox(width: 10),
+                          Text(_loading ? 'Saving…' : 'Save',
+                              style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
