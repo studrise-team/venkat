@@ -418,3 +418,67 @@ class AdminSheetField extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin Button
+// ─────────────────────────────────────────────────────────────────────────────
+class AdminButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+  final Color? color;
+
+  const AdminButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    this.onPressed,
+    this.isLoading = false,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: color == null ? AppColors.primaryGradient : null,
+            color: color,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: InkWell(
+            onTap: isLoading ? null : onPressed,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (isLoading)
+                    const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                  else
+                    Icon(icon, color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Text(label,
+                      style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

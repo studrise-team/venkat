@@ -181,16 +181,45 @@ class QuizProvider extends ChangeNotifier {
     final records = <AnswerRecord>[];
 
     for (int i = 0; i < _questions.length; i++) {
-      final q = _questions[i];
-      final selected = _selectedAnswers[i];
-      if (selected == q.answer) correct++;
-      records.add(AnswerRecord(
-        question: q.question,
-        options: q.options,
-        correctAnswer: q.answer,
-        selectedAnswer: selected,
-      ));
-    }
+       final q = _questions[i];
+       final selected = _selectedAnswers[i];
+       
+       bool isCorrect = false;
+       if (selected != null) {
+         // Flexible matching logic
+         final sNormalized = _normalizeAnswer(selected);
+         final aNormalized = _normalizeAnswer(q.answer);
+         
+         // Direct match
+         if (sNormalized == aNormalized) {
+           isCorrect = true;
+         } 
+         // If aNormalized is a label (A, B, C, D) but selected is the text
+         else if (aNormalized.length == 1 && RegExp(r'^[a-d]$').hasMatch(aNormalized)) {
+            int idx = aNormalized.codeUnitAt(0) - 97;
+            if (idx >= 0 && idx < q.options.length) {
+              if (_normalizeAnswer(q.options[idx]) == sNormalized) {
+                isCorrect = true;
+              }
+            }
+         }
+       }
+
+       if (isCorrect) correct++;
+       
+       debugPrint('Checking Q${i + 1}:');
+       debugPrint('  Selected: "$selected" -> "${selected != null ? _normalizeAnswer(selected) : null}"');
+       debugPrint('  Correct : "${q.answer}" -> "${_normalizeAnswer(q.answer)}"');
+       debugPrint('  RESULT  : ${isCorrect ? "CORRECT" : "WRONG"}');
+
+       records.add(AnswerRecord(
+         question: q.question,
+         options: q.options,
+         correctAnswer: q.answer,
+         selectedAnswer: selected,
+         isCorrect: isCorrect,
+       ));
+     }
 
     final total = _questions.length;
     _result = ResultModel(
@@ -200,6 +229,7 @@ class QuizProvider extends ChangeNotifier {
       percentage: total > 0 ? (correct / total) * 100 : 0,
       answers: records,
       takenAt: DateTime.now(),
+      examContext: _currentExam,
     );
     _state = QuizState.finished;
     notifyListeners();
@@ -218,6 +248,13 @@ class QuizProvider extends ChangeNotifier {
     } else {
       debugPrint('WARNING: No quizId found, result will not be saved to Firestore');
     }
+  }
+
+  String _normalizeAnswer(String text) {
+    String s = text.trim().toLowerCase();
+    if (s == 'none') return '';
+    // Remove leading "(a) ", "1. ", "a . "
+    return s.replaceFirst(RegExp(r'^\(?[a-d1-4]\s?[\.\)]\s?'), '').trim();
   }
 
   void resetQuiz() {
@@ -272,6 +309,7 @@ class QuizProvider extends ChangeNotifier {
           options: tQ.options,
           correctAnswer: tQ.answer,
           selectedAnswer: oldR.selectedAnswer,
+          isCorrect: oldR.isCorrect,
         ));
       }
 

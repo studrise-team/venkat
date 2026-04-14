@@ -16,7 +16,7 @@ class AuthService {
   // Synthesise email from username for Firebase Auth
   String _toEmail(String username) => '${username.trim().toLowerCase()}@astar.app';
 
-  // ── Register (Student / Aspirant) ─────────────────────────────────────────
+  // ── Register (Aspirant) ─────────────────────────────────────────
 
   Future<UserModel> registerUser({
     required String name,
@@ -25,9 +25,7 @@ class AuthService {
     required String role,
     String? email,
     String? phone,
-    String? classLevel,
-    String? address,
-    String? school,
+    String? classContext,
   }) async {
     // Check username uniqueness
     final existing = await _db
@@ -51,16 +49,14 @@ class AuthService {
       role: role,
       email: email?.trim(),
       phone: phone?.trim(),
-      classLevel: classLevel?.trim(),
-      address: address?.trim(),
-      school: school?.trim(),
-      isApproved: role != 'student', // Students need approval, others (aspirant) don't for now
+      classContext: classContext,
     );
     await _db.collection('users').doc(uid).set(user.toMap());
     return user;
   }
 
-  // ── Login (Student / Aspirant) ────────────────────────────────────────────
+
+  // ── Login (Aspirant) ────────────────────────────────────────────
 
   Future<UserModel> loginUser({
     required String username,
@@ -68,10 +64,29 @@ class AuthService {
   }) async {
     // Support login with email or username
     String loginEmail;
+    
     if (username.contains('@')) {
       loginEmail = username.trim().toLowerCase();
     } else {
-      loginEmail = _toEmail(username);
+      // Smart lookup: Find the actual email associated with this User ID in Firestore
+      final snap = await _db
+          .collection('users')
+          .where('username', isEqualTo: username.trim().toLowerCase())
+          .limit(1)
+          .get();
+
+      if (snap.docs.isNotEmpty) {
+        final data = snap.docs.first.data();
+        final storedEmail = data['email'] as String?;
+        // If the user has a real email stored, use it. Otherwise use the synthesized one.
+        loginEmail = (storedEmail != null && storedEmail.isNotEmpty)
+            ? storedEmail
+            : _toEmail(username);
+      } else {
+        // Fallback: If username doesn't exist in Firestore, use synthesized format
+        // so that Firebase Auth can return the correct "user not found" error.
+        loginEmail = _toEmail(username);
+      }
     }
 
     final cred = await _auth.signInWithEmailAndPassword(
@@ -141,5 +156,54 @@ class AuthService {
        return UserModel(uid: uid, name: user.name, username: user.username, role: 'admin', email: userEmail, phone: user.phone);
     }
     return user;
+  }
+
+  // ── Update Profile ────────────────────────────────────────────────────────
+  
+  Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
+    await _db.collection('users').doc(uid).update(data);
+  }
+
+  // ── Delete Account ────────────────────────────────────────────────────────
+
+  Future<void> deleteUserAccount(String uid) async {
+    final user = _auth.currentUser;
+    if (user == null || user.uid != uid) throw Exception('No authenticated user found');
+
+    final batch = _db.batch();
+
+    // 1. Delete user profile doc
+    batch.delete(_db.collection('users').doc(uid));
+
+    // 2. Clear centralized quiz results
+    final quizResults = await _db
+        .collection('student_quiz_results')
+        .where('studentId', isEqualTo: uid)
+        .get();
+    for (var doc in quizResults.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // 3. Clear attendance records
+    final attendance = await _db
+        .collection('student_attendance')
+        .where('studentId', isEqualTo: uid)
+        .get();
+    for (var doc in attendance.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Committing Firestore deletions before Auth deletion
+    await batch.commit();
+
+    // 4. Delete Auth account (requires recent login)
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        throw Exception('For security, please logout and log back in before deleting your account.');
+      }
+      rethrow;
+    }
   }
 }

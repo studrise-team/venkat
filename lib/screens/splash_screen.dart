@@ -62,18 +62,29 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _navigateBasedOnAuth() async {
     if (!mounted) return;
-    final profile = await AuthService().getCurrentUserProfile();
-    if (!mounted) return;
-    if (profile == null) {
-      Navigator.pushReplacementNamed(context, '/login');
-    } else if (profile.role == 'admin') {
-      Navigator.pushReplacementNamed(context, '/admin-dashboard');
-    } else if (profile.role == 'aspirant') {
-      Navigator.pushReplacementNamed(context, '/aspirant-dashboard');
-    } else if (profile.role == 'student') {
-      Navigator.pushReplacementNamed(context, '/student-dashboard');
-    } else {
-      Navigator.pushReplacementNamed(context, '/login');
+    try {
+      // Add a timeout to prevent hanging on splash if firestore is unreachable
+      final profile = await AuthService().getCurrentUserProfile().timeout(
+        const Duration(seconds: 6),
+        onTimeout: () => throw TimeoutException('Profile fetch timed out'),
+      );
+      
+      if (!mounted) return;
+
+      if (profile == null) {
+        Navigator.pushReplacementNamed(context, '/login');
+      } else if (profile.role == 'admin') {
+        Navigator.pushReplacementNamed(context, '/admin-dashboard');
+      } else if (profile.role == 'student') {
+        Navigator.pushReplacementNamed(context, '/student-dashboard');
+      } else if (profile.role == 'aspirant') {
+        Navigator.pushReplacementNamed(context, '/aspirant-dashboard');
+      } else {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      debugPrint('Navigation Auth Error: $e');
+      if (mounted) Navigator.pushReplacementNamed(context, '/login');
     }
   }
 

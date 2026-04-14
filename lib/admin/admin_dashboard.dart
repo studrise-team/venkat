@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
-import '../services/auth_service.dart';
-import '../services/ai_service.dart';
+import '../app_theme.dart';
 import '../widgets/logout_dialog.dart';
+import '../services/firebase_service.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -129,26 +130,37 @@ class AdminDashboard extends StatelessWidget {
 
                 // ── Menu Cards (Adaptive Grid/List) ────────────────────────
                 Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isTablet = constraints.maxWidth > 700;
-                      if (isTablet) {
-                        return GridView.count(
-                          crossAxisCount: 2,
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 2.2,
-                          children: _buildCards(context),
-                        );
-                      }
-                      return ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                        itemCount: _buildCards(context).length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 16),
-                        itemBuilder: (context, index) => _buildCards(context)[index],
+                  child: FutureBuilder<Map<String, dynamic>>(
+                    future: FirebaseService().getStats(),
+                    builder: (context, snapshot) {
+                      final studentCount = snapshot.data?['studentCount'] as int?;
+                      
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isTablet = constraints.maxWidth > 700;
+                          final cards = _buildCards(context, studentCount: studentCount);
+                          
+                          if (isTablet) {
+                            return GridView.count(
+                              crossAxisCount: 2,
+                              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              childAspectRatio: 2.2,
+                              children: cards,
+                            );
+                          }
+                          return ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                            itemCount: cards.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 16),
+                            itemBuilder: (context, index) {
+                              return cards[index];
+                            },
+                          );
+                        },
                       );
-                    },
+                    }
                   ),
                 ),
               ],
@@ -159,7 +171,7 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildCards(BuildContext context) {
+  List<Widget> _buildCards(BuildContext context, {int? studentCount}) {
     return [
       _ActionCard(
         icon: Icons.library_books_rounded,
@@ -169,18 +181,12 @@ class AdminDashboard extends StatelessWidget {
         onTap: () => Navigator.pushNamed(context, '/exam-management'),
       ),
       _ActionCard(
-        icon: Icons.people_alt_rounded,
-        gradient: AppColors.accentGradient,
-        title: 'Students Portal',
-        subtitle: 'Enrolments, attendance and approvals',
-        onTap: () => Navigator.pushNamed(context, '/student-admin'),
-      ),
-      _ActionCard(
         icon: Icons.school_rounded,
-        gradient: const LinearGradient(colors: [Color(0xFF00B894), Color(0xFF00CEC9)]),
-        title: 'Academic Flow',
-        subtitle: 'Manage Classes, Subjects and Curriculum',
-        onTap: () => Navigator.pushNamed(context, '/academic-management'),
+        gradient: AppColors.accentGradient,
+        title: 'School Students',
+        subtitle: 'Class 1-12: AI Quizzes, Live Classes, Attendance, Progress',
+        info: studentCount != null ? '$studentCount Registered' : null,
+        onTap: () => Navigator.pushNamed(context, '/student-management'),
       ),
     ];
   }
@@ -191,6 +197,7 @@ class _ActionCard extends StatefulWidget {
   final LinearGradient gradient;
   final String title;
   final String subtitle;
+  final String? info;
   final VoidCallback onTap;
 
   const _ActionCard({
@@ -198,6 +205,7 @@ class _ActionCard extends StatefulWidget {
     required this.gradient,
     required this.title,
     required this.subtitle,
+    this.info,
     required this.onTap,
   });
 
@@ -263,10 +271,32 @@ class _ActionCardState extends State<_ActionCard> {
                           fontWeight: FontWeight.w800,
                         )),
                     const SizedBox(height: 4),
-                    Text(widget.subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12, height: 1.3)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(widget.subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12, height: 1.3)),
+                        ),
+                        if (widget.info != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: widget.gradient.colors.first.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(widget.info!,
+                                style: GoogleFonts.outfit(
+                                  color: widget.gradient.colors.first,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                )),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -278,3 +308,4 @@ class _ActionCardState extends State<_ActionCard> {
     );
   }
 }
+

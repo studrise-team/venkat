@@ -2,10 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
 import '../services/auth_service.dart';
+import '../models/user_model.dart';
 import '../widgets/logout_dialog.dart';
+import '../auth/profile_page.dart';
 
-class AspirantDashboard extends StatelessWidget {
+class AspirantDashboard extends StatefulWidget {
   const AspirantDashboard({super.key});
+
+  @override
+  State<AspirantDashboard> createState() => _AspirantDashboardState();
+}
+
+class _AspirantDashboardState extends State<AspirantDashboard> {
+  UserModel? _user;
+  bool _loadingUser = true;
 
   static const _exams = [
     {'name': 'DSC', 'icon': Icons.menu_book_rounded, 'color': Color(0xFF6C63FF)},
@@ -19,12 +29,40 @@ class AspirantDashboard extends StatelessWidget {
     {'name': 'Group 4', 'icon': Icons.looks_4_rounded, 'color': Color(0xFF26C6DA)},
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await AuthService().getCurrentUserProfile();
+    if (mounted) {
+      setState(() {
+        _user = user;
+        _loadingUser = false;
+      });
+    }
+  }
+
   void _logout(BuildContext context) async {
     await LogoutDialog.show(context);
   }
 
+  void _openProfile() {
+    if (_user == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ProfilePage(user: _user!)),
+    ).then((_) => _loadUser());
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_loadingUser) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+    }
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -42,29 +80,35 @@ class AspirantDashboard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                   child: Row(
                     children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: const BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          shape: BoxShape.circle,
+                      GestureDetector(
+                        onTap: _openProfile,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: const BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.person_rounded, color: Colors.white, size: 22),
                         ),
-                        child: const Icon(Icons.school_rounded, color: Colors.white, size: 22),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Astar Learning',
-                                style: GoogleFonts.outfit(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700)),
-                            Text('Choose your exam',
-                                style: GoogleFonts.outfit(
-                                    color: AppColors.textSecondary, fontSize: 12)),
-                          ],
+                        child: GestureDetector(
+                          onTap: _openProfile,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_user?.name ?? 'Aspirant',
+                                  style: GoogleFonts.outfit(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700)),
+                              Text('Choose your exam',
+                                  style: GoogleFonts.outfit(
+                                      color: AppColors.textSecondary, fontSize: 12)),
+                            ],
+                          ),
                         ),
                       ),
                       IconButton(
@@ -125,7 +169,7 @@ class AspirantDashboard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // ── Exam Grid (Responsive) ──────────────────────────────────
+                // ── Exam Grid ──────────────────────────────────────────────
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),

@@ -112,6 +112,7 @@ class FirebaseService {
       'studentId': uid,
       'quizId': quizId,
       'quizTitle': quizTitle,
+      'exam': result.examContext, // Added this field
       'score': result.correctAnswers,
       'total': result.totalQuestions,
       'percentage': result.percentage,
@@ -201,14 +202,71 @@ class FirebaseService {
       totalQuestions += (doc.data()['questionCount'] as int? ?? 0);
     }
     
-    // Students Count
+    // Students Count & Breakdown
     final studentSnaps = await _firestore.collection('users').where('role', isEqualTo: 'student').get();
+    
+    final Map<String, int> classBreakdown = {};
+    for (var doc in studentSnaps.docs) {
+      final className = (doc.data() as Map<String, dynamic>)['classContext'] ?? 'Unassigned';
+      classBreakdown[className] = (classBreakdown[className] ?? 0) + 1;
+    }
     
     return {
       'quizCount': snaps.docs.length,
       'totalQuestions': totalQuestions,
       'studentCount': studentSnaps.docs.length,
+      'classBreakdown': classBreakdown,
       'avgScore': 0.0,
     };
+  }
+
+  // ── Attendance ─────────────────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getStudentsByClass(String className) async {
+    final snap = await _firestore.collection('users')
+        .where('role', isEqualTo: 'student')
+        .where('classContext', isEqualTo: className)
+        .get();
+    return snap.docs.map((d) => {'uid': d.id, ...d.data()}).toList();
+  }
+
+  Future<void> saveBulkAttendance(List<Map<String, dynamic>> records) async {
+    final batch = _firestore.batch();
+    for (final record in records) {
+      // Check if record for this student on this date and subject already exists to update instead of add
+      final existing = await _firestore.collection('student_attendance')
+          .where('studentId', isEqualTo: record['studentId'])
+          .where('date', isEqualTo: record['date'])
+          .where('subject', isEqualTo: record['subject'])
+          .get();
+      
+      if (existing.docs.isNotEmpty) {
+        batch.update(existing.docs.first.reference, {
+          ...record,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        final docRef = _firestore.collection('student_attendance').doc();
+        batch.set(docRef, {
+          ...record,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+    await batch.commit();
+  }
+
+  Stream<List<Map<String, dynamic>>> getAttendanceStream(String className, {String? studentId}) {
+    Query query = _firestore.collection('student_attendance').where('exam', isEqualTo: className);
+    if (studentId != null) {
+      query = query.where('studentId', isEqualTo: studentId);
+    }
+    return query.snapshots().map((snap) {
+      return snap.docs.map((d) {
+        final data = d.data() as Map<String, dynamic>;
+        return {'id': d.id, ...data};
+      }).toList();
+    });
   }
 }

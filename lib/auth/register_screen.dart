@@ -12,16 +12,10 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  final _classCtrl = TextEditingController();
-  final _addressCtrl = TextEditingController();
-  final _schoolCtrl = TextEditingController();
-
-  String _role = 'aspirant';
   bool _obscurePass = true;
   bool _obscureConfirm = true;
   bool _loading = false;
@@ -32,17 +26,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _checkingUsername = false;
   Timer? _debounce;
 
+  String? _role; // null=none, 'aspirant' or 'student'
+  String? _selectedClass;
+  static const _classes = [
+    'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5',
+    'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10',
+    'Class 11', 'Class 12',
+  ];
+
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _usernameCtrl.dispose();
     _passCtrl.dispose();
     _confirmCtrl.dispose();
-    _classCtrl.dispose();
-    _addressCtrl.dispose();
-    _schoolCtrl.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -77,11 +75,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    if (_role == 'student') {
-      if (_classCtrl.text.isEmpty || _schoolCtrl.text.isEmpty) {
-        setState(() => _error = 'Please fill all student details.');
-        return;
-      }
+    if (_role == null) {
+      setState(() => _error = 'Please select your role (Aspirant or Student).');
+      return;
+    }
+
+    if (_role == 'student' && _selectedClass == null) {
+      setState(() => _error = 'Please select your class.');
+      return;
     }
 
     if (pass != confirm) {
@@ -103,21 +104,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         name: name,
         username: username,
         password: pass,
-        role: _role,
-        email: _emailCtrl.text.trim(),
+        role: _role!,
         phone: phone,
-        classLevel: _classCtrl.text.trim(),
-        address: _addressCtrl.text.trim(),
-        school: _schoolCtrl.text.trim(),
+        classContext: _selectedClass,
       );
       if (!mounted) return;
-      if (user.role == 'aspirant') {
-        Navigator.pushReplacementNamed(context, '/aspirant-dashboard');
+      
+      if (user.role == 'student') {
+        Navigator.pushReplacementNamed(context, '/student-dashboard');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration successful! Please login.')),
-        );
-        Navigator.pushReplacementNamed(context, '/login');
+        Navigator.pushReplacementNamed(context, '/aspirant-dashboard');
       }
     } on Exception catch (e) {
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -168,34 +164,73 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
                           )),
-                      Text('Start your exam preparation journey',
+                      Text('Start your journey with Astar',
                           style: GoogleFonts.outfit(
                               color: AppColors.textSecondary, fontSize: 14)),
-                      const SizedBox(height: 30),
-
-                      // Role selector
-                      _buildLabel('I am a…'),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          _RoleChip(
-                            label: 'Aspirant',
-                            icon: Icons.emoji_events_rounded,
-                            selected: _role == 'aspirant',
-                            gradient: AppColors.primaryGradient,
-                            onTap: () => setState(() => _role = 'aspirant'),
-                          ),
-                          const SizedBox(width: 12),
-                          _RoleChip(
-                            label: 'Student',
-                            icon: Icons.school_rounded,
-                            selected: _role == 'student',
-                            gradient: AppColors.accentGradient,
-                            onTap: () => setState(() => _role = 'student'),
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: 24),
+
+                      // Role Selection
+                      _buildLabel('Choose Your Role'),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.cardBorder),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _role,
+                            hint: Text('Select Your Role', style: GoogleFonts.outfit(color: AppColors.textMuted, fontSize: 14)),
+                            isExpanded: true,
+                            dropdownColor: AppColors.surface,
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                            style: GoogleFonts.outfit(color: AppColors.textPrimary, fontSize: 15),
+                            items: const [
+                              DropdownMenuItem(value: 'aspirant', child: Text('Aspirant (Competitive Exams)')),
+                              DropdownMenuItem(value: 'student', child: Text('Student (School/College)')),
+                            ],
+                            onChanged: (v) {
+                              if (v != null) {
+                                setState(() {
+                                  _role = v;
+                                  if (_role == 'aspirant') _selectedClass = null;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      if (_role == 'student') ...[
+                        _buildLabel('Select Class'),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedClass,
+                              hint: Text('Choose your class', style: GoogleFonts.outfit(color: AppColors.textMuted, fontSize: 14)),
+                              isExpanded: true,
+                              dropdownColor: AppColors.surface,
+                              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                              style: GoogleFonts.outfit(color: AppColors.textPrimary, fontSize: 15),
+                              items: _classes.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                              onChanged: (v) => setState(() => _selectedClass = v),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+
+
 
                       // Basic Details
                       _buildHeader('Basic Information'),
@@ -220,52 +255,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Student Specific Fields
-                      if (_role == 'student') ...[
-                        _buildHeader('Student Details'),
-                        const SizedBox(height: 16),
-                        
-                        _buildLabel('Class / Course'),
-                        const SizedBox(height: 8),
-                        _buildField(
-                          controller: _classCtrl,
-                          hint: 'e.g. 10th Standard, JEE, NEET',
-                          icon: Icons.class_rounded,
-                        ),
-                        const SizedBox(height: 16),
-
-                        _buildLabel('School / College Name'),
-                        const SizedBox(height: 8),
-                        _buildField(
-                          controller: _schoolCtrl,
-                          hint: 'Enter your institution name',
-                          icon: Icons.account_balance_rounded,
-                        ),
-                        const SizedBox(height: 16),
-
-                        _buildLabel('Home Address'),
-                        const SizedBox(height: 8),
-                        _buildField(
-                          controller: _addressCtrl,
-                          hint: 'Enter your full address',
-                          icon: Icons.location_on_rounded,
-                          maxLines: 2,
-                        ),
-                        const SizedBox(height: 24),
-                      ],
 
                       _buildHeader('Account Security'),
-                      const SizedBox(height: 16),
-
-                      // Email
-                      _buildLabel('Email Address (Optional)'),
-                      const SizedBox(height: 8),
-                      _buildField(
-                        controller: _emailCtrl,
-                        hint: 'Enter your email',
-                        icon: Icons.email_rounded,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
                       const SizedBox(height: 16),
 
                       // Username
@@ -523,55 +514,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-class _RoleChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final LinearGradient gradient;
-  final VoidCallback onTap;
-
-  const _RoleChip({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.gradient,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            gradient: selected ? gradient : null,
-            color: selected ? null : AppColors.card,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected
-                  ? Colors.transparent
-                  : AppColors.cardBorder,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(icon,
-                  color: selected ? Colors.white : AppColors.textSecondary,
-                  size: 24),
-              const SizedBox(height: 6),
-              Text(label,
-                  style: GoogleFonts.outfit(
-                    color: selected ? Colors.white : AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  )),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

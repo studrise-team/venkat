@@ -2,13 +2,10 @@ class UserModel {
   final String uid;
   final String name;
   final String username;
-  final String role; // 'student' | 'aspirant' | 'admin'
+  final String role; // 'aspirant' | 'admin' | 'student'
   final String? email;
   final String? phone;
-  final String? classLevel;
-  final String? address;
-  final String? school;
-  final bool isApproved;
+  final String? classContext;
 
   const UserModel({
     required this.uid,
@@ -17,10 +14,7 @@ class UserModel {
     required this.role,
     this.email,
     this.phone,
-    this.classLevel,
-    this.address,
-    this.school,
-    this.isApproved = false,
+    this.classContext,
   });
 
   factory UserModel.fromMap(String uid, Map<String, dynamic> map) {
@@ -31,10 +25,7 @@ class UserModel {
       role: map['role'] as String? ?? 'aspirant',
       email: map['email'] as String?,
       phone: map['phone'] as String?,
-      classLevel: map['classLevel'] as String?,
-      address: map['address'] as String?,
-      school: map['school'] as String?,
-      isApproved: map['isApproved'] as bool? ?? false,
+      classContext: map['classContext'] as String?,
     );
   }
 
@@ -44,9 +35,6 @@ class UserModel {
         'role': role,
         'email': email,
         'phone': phone,
-        'classLevel': classLevel,
-        'address': address,
-        'school': school,
-        'isApproved': isApproved,
+        'classContext': classContext,
       };
 }

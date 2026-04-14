@@ -17,6 +17,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   String? _error;
 
+
+
   @override
   void dispose() {
     _usernameCtrl.dispose();
@@ -41,15 +43,14 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
       );
       if (!mounted) return;
-      switch (user.role) {
-        case 'aspirant':
-          Navigator.pushReplacementNamed(context, '/aspirant-dashboard');
-          break;
-        case 'student':
-          Navigator.pushReplacementNamed(context, '/student-dashboard');
-          break;
-        default:
-          Navigator.pushReplacementNamed(context, '/login');
+      
+      // Navigate based on user role
+      if (user.role == 'admin') {
+         Navigator.pushReplacementNamed(context, '/admin-dashboard');
+      } else if (user.role == 'student') {
+         Navigator.pushReplacementNamed(context, '/student-dashboard');
+      } else {
+         Navigator.pushReplacementNamed(context, '/aspirant-dashboard');
       }
     } on Exception catch (e) {
       String msg = e.toString().replaceAll('Exception: ', '');
@@ -202,9 +203,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 24),
+
                                   _InputField(
                                     controller: _usernameCtrl,
-                                    label: 'Username / Email',
+                                    label: 'User ID / Username',
                                     icon: Icons.person_rounded,
                                     onChanged: (_) => setState(() => _error = null),
                                   ),
