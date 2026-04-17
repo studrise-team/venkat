@@ -9,7 +9,8 @@ class MyAttendanceView extends StatelessWidget {
   final String className;
   final String studentName;
   final String? subject;
-  const MyAttendanceView({super.key, required this.className, required this.studentName, this.subject});
+  final bool showBackButton;
+  const MyAttendanceView({super.key, required this.className, required this.studentName, this.subject, this.showBackButton = true});
 
   @override
   Widget build(BuildContext context) {
@@ -22,13 +23,14 @@ class MyAttendanceView extends StatelessWidget {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
+                padding: EdgeInsets.fromLTRB(showBackButton ? 8 : 24, 12, 16, 0),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary),
-                      onPressed: () => Navigator.pop(context),
-                    ),
+                    if (showBackButton)
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

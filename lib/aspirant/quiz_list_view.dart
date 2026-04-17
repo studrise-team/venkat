@@ -12,6 +12,7 @@ class QuizListView extends StatelessWidget {
   final String? subject;
   final String collection; // 'quizzes' or 'daily_quizzes'
   final String title;
+  final bool showBackButton;
 
   const QuizListView({
     super.key,
@@ -19,6 +20,7 @@ class QuizListView extends StatelessWidget {
     this.subject,
     required this.collection,
     required this.title,
+    this.showBackButton = true,
   });
 
   @override
@@ -30,14 +32,15 @@ class QuizListView extends StatelessWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 12, 24, 0),
+                padding: EdgeInsets.fromLTRB(showBackButton ? 8 : 24, 12, 24, 0),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: AppColors.textPrimary),
-                      onPressed: () => Navigator.pop(context),
-                    ),
+                    if (showBackButton)
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.textPrimary),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

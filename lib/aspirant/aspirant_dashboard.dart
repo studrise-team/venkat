@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import '../app_theme.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
@@ -16,6 +17,7 @@ class AspirantDashboard extends StatefulWidget {
 class _AspirantDashboardState extends State<AspirantDashboard> {
   UserModel? _user;
   bool _loadingUser = true;
+  DateTime? _lastBackPressTime;
 
   static const _exams = [
     {'name': 'DSC', 'icon': Icons.menu_book_rounded, 'color': Color(0xFF6C63FF)},
@@ -67,7 +69,28 @@ class _AspirantDashboardState extends State<AspirantDashboard> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        _logout(context);
+        
+        final now = DateTime.now();
+        if (_lastBackPressTime == null || 
+            now.difference(_lastBackPressTime!) > const Duration(seconds: 3)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Press back again to exit',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+              width: 200,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: AppColors.textPrimary.withOpacity(0.9),
+            ),
+          );
+        } else {
+          SystemNavigator.pop();
+        }
       },
       child: Scaffold(
         body: Container(

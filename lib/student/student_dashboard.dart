@@ -11,11 +11,14 @@ import '../aspirant/notes_view.dart';
 import 'my_attendance_view.dart';
 import 'my_progress_view.dart';
 import 'my_results_view.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../auth/profile_page.dart';
 import '../services/firebase_service.dart';
 import '../models/event_model.dart';
+import '../widgets/student_sidebar.dart';
+import 'all_events_page.dart';
 
 // ---------------------------------------------------------------------------
 // Tab indices
@@ -33,6 +36,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
   UserModel? _user;
   bool _loading = true;
   _Tab _currentTab = _Tab.home;
+  DateTime? _lastBackPressTime;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -104,12 +109,19 @@ class _StudentDashboardState extends State<StudentDashboard> {
   // ---------------------------------------------------------------------------
   // Build helpers
   // ---------------------------------------------------------------------------
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isMobile) {
     final className = _user?.classContext ?? 'General';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Row(
         children: [
+          if (isMobile) ...[
+            IconButton(
+              icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary),
+              onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+            ),
+            const SizedBox(width: 8),
+          ],
           GestureDetector(
             onTap: _openProfile,
             child: Container(
@@ -139,10 +151,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
               ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
-            onPressed: () => _logout(context),
-          ),
+          if (isMobile)
+            IconButton(
+              icon: const Icon(Icons.logout_rounded, color: AppColors.textSecondary),
+              onPressed: () => _logout(context),
+            ),
         ],
       ),
     );
@@ -327,11 +340,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       color: AppColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w700)),
-              Text('View all',
-                  style: GoogleFonts.outfit(
-                      color: AppColors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AllEventsPage())),
+                child: Text('View all',
+                    style: GoogleFonts.outfit(
+                        color: AppColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+              ),
             ],
           ),
         ),
@@ -444,7 +460,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         const SizedBox(height: 16),
         Expanded(
           child: MyAttendanceView(
-              className: className, studentName: _user!.name),
+              className: className, studentName: _user!.name, showBackButton: false),
         ),
       ],
     );
@@ -462,7 +478,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         const SizedBox(height: 16),
         Expanded(
           child: MyResultsView(
-              className: className, studentId: _user!.uid),
+              className: className, studentId: _user!.uid, showBackButton: false),
         ),
       ],
     );
@@ -478,7 +494,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         const SizedBox(height: 16),
         Expanded(
           child: MyProgressView(
-              className: className, studentName: _user!.name),
+              className: className, studentName: _user!.name, showBackButton: false),
         ),
       ],
     );
@@ -504,7 +520,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
     return BottomNavigationBar(
       currentIndex: _Tab.values.indexOf(_currentTab),
       onTap: (i) => setState(() => _currentTab = _Tab.values[i]),
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: AppColors.surface,
       selectedItemColor: AppColors.primary,
       unselectedItemColor: AppColors.textSecondary,
       selectedLabelStyle:
@@ -544,6 +560,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
               child: CircularProgressIndicator(color: AppColors.primary)));
     }
 
+    final isMobile = MediaQuery.of(context).size.width < 800;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -552,22 +570,88 @@ class _StudentDashboardState extends State<StudentDashboard> {
         if (_currentTab != _Tab.home) {
           setState(() => _currentTab = _Tab.home);
         } else {
-          _logout(context);
+          final now = DateTime.now();
+          if (_lastBackPressTime == null || 
+              now.difference(_lastBackPressTime!) > const Duration(seconds: 3)) {
+            _lastBackPressTime = now;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Press back again to exit',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 2),
+                width: 200,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: AppColors.textPrimary.withOpacity(0.9),
+              ),
+            );
+          } else {
+            SystemNavigator.pop();
+          }
         }
       },
       child: Scaffold(
-        bottomNavigationBar: _buildBottomNav(),
-        body: Container(
-          decoration: const BoxDecoration(gradient: AppColors.bgGradient),
-          child: SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(),
-                Expanded(child: _buildBody()),
-              ],
+        key: _scaffoldKey,
+        backgroundColor: AppColors.bg,
+        drawer: isMobile
+            ? StudentSidebar(
+                user: _user,
+                currentIndex: _Tab.values.indexOf(_currentTab),
+                onTabSelected: (i) {
+                  if (i == -1) {
+                    Navigator.pop(context);
+                    _openProfile();
+                  } else {
+                    setState(() => _currentTab = _Tab.values[i]);
+                    Navigator.pop(context);
+                  }
+                },
+                onLogout: () => _logout(context),
+              )
+            : null,
+        bottomNavigationBar: isMobile ? _buildBottomNav() : null,
+        body: LayoutBuilder(builder: (context, constraints) {
+          // Re-calculate mobile state based on constraints for the body layout
+          final isSmall = constraints.maxWidth < 800;
+
+          final mainContent = Container(
+            decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(isSmall),
+                  Expanded(child: _buildBody()),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+
+          if (isSmall) {
+            return mainContent;
+          }
+
+          return Row(
+            children: [
+              StudentSidebar(
+                isPermanent: true,
+                user: _user,
+                currentIndex: _Tab.values.indexOf(_currentTab),
+                onTabSelected: (i) {
+                  if (i == -1) {
+                    _openProfile();
+                  } else {
+                    setState(() => _currentTab = _Tab.values[i]);
+                  }
+                },
+                onLogout: () => _logout(context),
+              ),
+              Expanded(child: mainContent),
+            ],
+          );
+        }),
       ),
     );
   }
@@ -584,9 +668,9 @@ class _SubjectActionSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       decoration: const BoxDecoration(
-        color: Color(0xFF1A1A2E), // Match app theme
+        color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 40, spreadRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20, spreadRadius: 0)],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

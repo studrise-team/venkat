@@ -6,13 +6,22 @@ import '../widgets/logout_dialog.dart';
 import '../services/firebase_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-class AdminDashboard extends StatelessWidget {
+import 'package:flutter/services.dart';
+import 'package:fl_chart/fl_chart.dart';
+
+class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
+
+  @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard> {
+  DateTime? _lastBackPressTime;
 
   void _logout(BuildContext context) async {
     await LogoutDialog.show(context);
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +29,28 @@ class AdminDashboard extends StatelessWidget {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        _logout(context);
+        
+        final now = DateTime.now();
+        if (_lastBackPressTime == null || 
+            now.difference(_lastBackPressTime!) > const Duration(seconds: 3)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Press back again to exit',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+              width: 200,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: AppColors.textPrimary.withOpacity(0.9),
+            ),
+          );
+        } else {
+          SystemNavigator.pop();
+        }
       },
       child: Scaffold(
         body: Container(
