@@ -9,12 +9,14 @@ import '../providers/quiz_provider.dart';
 /// Shows quiz list for Aspirant (Mock Tests or Daily Quiz)
 class QuizListView extends StatelessWidget {
   final String exam;
+  final String? subject;
   final String collection; // 'quizzes' or 'daily_quizzes'
   final String title;
 
   const QuizListView({
     super.key,
     required this.exam,
+    this.subject,
     required this.collection,
     required this.title,
   });
@@ -41,7 +43,7 @@ class QuizListView extends StatelessWidget {
                       children: [
                         Text(title, style: GoogleFonts.outfit(
                             color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
-                        Text(exam, style: GoogleFonts.outfit(
+                        Text(subject != null ? '$exam • $subject' : exam, style: GoogleFonts.outfit(
                             color: AppColors.textSecondary, fontSize: 12)),
                       ],
                     ),
@@ -51,7 +53,7 @@ class QuizListView extends StatelessWidget {
               const SizedBox(height: 16),
               Expanded(
                 child: StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
-                  stream: FirebaseService().getQuizzesByExam(exam, collection: collection),
+                  stream: FirebaseService().getQuizzesByExam(exam, collection: collection, subject: subject),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator(color: AppColors.primary));

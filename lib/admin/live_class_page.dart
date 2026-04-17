@@ -6,12 +6,14 @@ import 'shared_widgets.dart';
 
 class LiveClassPage extends StatelessWidget {
   final String exam;
-  const LiveClassPage({super.key, required this.exam});
+  final String? subject;
+  const LiveClassPage({super.key, required this.exam, this.subject});
 
   @override
   Widget build(BuildContext context) {
     return AdminCrudPage(
       exam: exam,
+      subject: subject,
       title: 'Live Classes',
       collection: 'live_classes',
       icon: Icons.live_tv,
@@ -21,7 +23,7 @@ class LiveClassPage extends StatelessWidget {
         end: Alignment.bottomRight,
       ),
       formBuilder: (data, onSave) =>
-          _LiveForm(exam: exam, data: data, onSave: onSave),
+          _LiveForm(exam: exam, subject: subject, data: data, onSave: onSave),
       cardBuilder: (doc) => _LiveCard(doc: doc),
     );
   }
@@ -91,9 +93,10 @@ class _LiveCard extends StatelessWidget {
 
 class _LiveForm extends StatefulWidget {
   final String exam;
+  final String? subject;
   final Map<String, dynamic>? data;
   final VoidCallback onSave;
-  const _LiveForm({required this.exam, this.data, required this.onSave});
+  const _LiveForm({required this.exam, this.subject, this.data, required this.onSave});
 
   @override
   State<_LiveForm> createState() => _LiveFormState();
@@ -161,6 +164,7 @@ class _LiveFormState extends State<_LiveForm> {
     try {
       final Map<String, dynamic> payload = {
         'exam': widget.exam,
+        'subject': widget.subject,
         'title': _titleCtrl.text.trim(),
         'date': _dateCtrl.text.trim(),
         'time': _timeCtrl.text.trim(),

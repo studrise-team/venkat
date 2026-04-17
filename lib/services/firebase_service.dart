@@ -1,7 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 import '../models/question_model.dart';
 import '../models/result_model.dart';
+import '../models/event_model.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -20,10 +23,12 @@ class FirebaseService {
     List<QuestionModel> questions, {
     String exam = '',
     String collection = 'quizzes',
+    String? subject,
   }) async {
     final docRef = await _firestore.collection(collection).add({
       'title': title.isEmpty ? 'Untitled Quiz' : title,
       'exam': exam,
+      'subject': subject,
       'questionCount': questions.length,
       'createdAt': FieldValue.serverTimestamp(),
       'createdBy': currentUser?.uid ?? 'admin',
@@ -40,10 +45,12 @@ class FirebaseService {
     List<QuestionModel> questions, {
     String exam = '',
     String collection = 'quizzes',
+    String? subject,
   }) async {
     await _firestore.collection(collection).doc(quizId).update({
       'title': title.isEmpty ? 'Untitled Quiz' : title,
       'exam': exam,
+      'subject': subject,
       'questionCount': questions.length,
       'questions': questions.map((q) => q.toJson()).toList(),
     });
@@ -60,12 +67,17 @@ class FirebaseService {
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getQuizzesByExam(
     String exam, {
     String collection = 'quizzes',
+    String? subject,
   }) {
-    return _firestore
+    Query<Map<String, dynamic>> query = _firestore
         .collection(collection)
-        .where('exam', isEqualTo: exam)
-        .snapshots()
-        .map((snapshot) {
+        .where('exam', isEqualTo: exam);
+    
+    if (subject != null) {
+      query = query.where('subject', isEqualTo: subject);
+    }
+
+    return query.snapshots().map((snapshot) {
       final docs = snapshot.docs.toList();
       docs.sort((a, b) {
         final t1 = a.data()['createdAt'] as Timestamp?;
@@ -112,7 +124,8 @@ class FirebaseService {
       'studentId': uid,
       'quizId': quizId,
       'quizTitle': quizTitle,
-      'exam': result.examContext, // Added this field
+      'exam': result.examContext,
+      'subject': result.subjectContext,
       'score': result.correctAnswers,
       'total': result.totalQuestions,
       'percentage': result.percentage,
@@ -159,11 +172,16 @@ class FirebaseService {
   }
 
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getDocumentsByExam(
-      String collection, String exam) {
-    return _firestore
+      String collection, String exam, {String? subject}) {
+    Query<Map<String, dynamic>> query = _firestore
         .collection(collection)
-        .where('exam', isEqualTo: exam)
-        .snapshots()
+        .where('exam', isEqualTo: exam);
+    
+    if (subject != null) {
+      query = query.where('subject', isEqualTo: subject);
+    }
+
+    return query.snapshots()
         .map((snapshot) {
       final docs = snapshot.docs.toList();
       docs.sort((a, b) {
@@ -257,10 +275,13 @@ class FirebaseService {
     await batch.commit();
   }
 
-  Stream<List<Map<String, dynamic>>> getAttendanceStream(String className, {String? studentId}) {
+  Stream<List<Map<String, dynamic>>> getAttendanceStream(String className, {String? studentId, String? subject}) {
     Query query = _firestore.collection('student_attendance').where('exam', isEqualTo: className);
     if (studentId != null) {
       query = query.where('studentId', isEqualTo: studentId);
+    }
+    if (subject != null) {
+      query = query.where('subject', isEqualTo: subject);
     }
     return query.snapshots().map((snap) {
       return snap.docs.map((d) {
@@ -268,5 +289,58 @@ class FirebaseService {
         return {'id': d.id, ...data};
       }).toList();
     });
+  }
+
+  // ── Subjects ─────────────────────────────────────────────────────────────
+  
+  Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getSubjects(String exam) {
+    return _firestore
+        .collection('subjects')
+        .where('exam', isEqualTo: exam)
+        .snapshots()
+        .map((snapshot) => snapshot.docs);
+  }
+
+  Future<void> addSubject(String exam, String subjectName) async {
+    await _firestore.collection('subjects').add({
+      'exam': exam,
+      'name': subjectName,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteSubject(String subjectId) async {
+    await _firestore.collection('subjects').doc(subjectId).delete();
+  }
+
+  // ── Events ───────────────────────────────────────────────────────────────
+
+  Stream<List<EventModel>> getEventsStream() {
+    return _firestore
+        .collection('events')
+        .orderBy('date', descending: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => EventModel.fromMap(doc.id, doc.data()))
+            .toList());
+  }
+
+  Future<void> saveEvent(EventModel event) async {
+    if (event.id.isEmpty) {
+      await _firestore.collection('events').add(event.toMap());
+    } else {
+      await _firestore.collection('events').doc(event.id).update(event.toMap());
+    }
+  }
+
+  Future<void> deleteEvent(String eventId) async {
+    await _firestore.collection('events').doc(eventId).delete();
+  }
+
+  Future<String> uploadEventImage(File image) async {
+    final fileName = 'event_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final ref = FirebaseStorage.instance.ref().child('events/$fileName');
+    final uploadTask = await ref.putFile(image);
+    return await uploadTask.ref.getDownloadURL();
   }
 }

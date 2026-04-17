@@ -8,7 +8,8 @@ import '../screens/video_class_player_page.dart';
 
 class LiveClassView extends StatelessWidget {
   final String exam;
-  const LiveClassView({super.key, required this.exam});
+  final String? subject;
+  const LiveClassView({super.key, required this.exam, this.subject});
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +32,8 @@ class LiveClassView extends StatelessWidget {
                       children: [
                         Text('Live Classes', style: GoogleFonts.outfit(
                             color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
-                        Text(exam, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
+                        Text(subject != null ? '$exam • $subject' : exam, 
+                            style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
                       ],
                     ),
                   ],
@@ -40,7 +42,7 @@ class LiveClassView extends StatelessWidget {
               const SizedBox(height: 16),
               Expanded(
                 child: StreamBuilder(
-                  stream: FirebaseService().getDocumentsByExam('live_classes', exam),
+                  stream: FirebaseService().getDocumentsByExam('live_classes', exam, subject: subject),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator(color: AppColors.primary));

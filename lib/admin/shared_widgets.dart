@@ -60,6 +60,7 @@ void showAdminSnackBar(
 // ─────────────────────────────────────────────────────────────────────────────
 class AdminCrudPage extends StatelessWidget {
   final String exam;
+  final String? subject;
   final String title;
   final String collection;
   final IconData icon;
@@ -70,6 +71,7 @@ class AdminCrudPage extends StatelessWidget {
   const AdminCrudPage({
     super.key,
     required this.exam,
+    this.subject,
     required this.title,
     required this.collection,
     required this.icon,
@@ -142,7 +144,7 @@ class AdminCrudPage extends StatelessWidget {
                                   color: AppColors.textPrimary,
                                   fontSize: 20,
                                   fontWeight: FontWeight.w700)),
-                          Text(exam,
+                          Text(subject != null ? '$exam • $subject' : exam,
                               style: GoogleFonts.outfit(
                                   color: AppColors.textSecondary, fontSize: 12)),
                         ],
@@ -166,7 +168,7 @@ class AdminCrudPage extends StatelessWidget {
               Expanded(
                 child: StreamBuilder(
                   stream:
-                      FirebaseService().getDocumentsByExam(collection, exam),
+                      FirebaseService().getDocumentsByExam(collection, exam, subject: subject),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(

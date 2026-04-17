@@ -6,12 +6,14 @@ import 'shared_widgets.dart';
 
 class NotesPage extends StatelessWidget {
   final String exam;
-  const NotesPage({super.key, required this.exam});
+  final String? subject;
+  const NotesPage({super.key, required this.exam, this.subject});
 
   @override
   Widget build(BuildContext context) {
     return AdminCrudPage(
       exam: exam,
+      subject: subject,
       title: 'Notes',
       collection: 'notes',
       icon: Icons.note_rounded,
@@ -21,7 +23,7 @@ class NotesPage extends StatelessWidget {
         end: Alignment.bottomRight,
       ),
       formBuilder: (data, onSave) =>
-          _NotesForm(exam: exam, data: data, onSave: onSave),
+          _NotesForm(exam: exam, subject: subject, data: data, onSave: onSave),
       cardBuilder: (doc) => _NoteCard(doc: doc),
     );
   }
@@ -89,9 +91,10 @@ class _NoteCard extends StatelessWidget {
 
 class _NotesForm extends StatefulWidget {
   final String exam;
+  final String? subject;
   final Map<String, dynamic>? data;
   final VoidCallback onSave;
-  const _NotesForm({required this.exam, this.data, required this.onSave});
+  const _NotesForm({required this.exam, this.subject, this.data, required this.onSave});
 
   @override
   State<_NotesForm> createState() => _NotesFormState();
@@ -108,7 +111,7 @@ class _NotesFormState extends State<_NotesForm> {
   void initState() {
     super.initState();
     final d = widget.data;
-    _subjectCtrl = TextEditingController(text: d?['subject'] ?? '');
+    _subjectCtrl = TextEditingController(text: d?['subject'] ?? widget.subject ?? '');
     _topicCtrl = TextEditingController(text: d?['topic'] ?? '');
     _descCtrl = TextEditingController(text: d?['description'] ?? '');
     _linkCtrl = TextEditingController(text: d?['driveLink'] ?? '');
@@ -131,7 +134,7 @@ class _NotesFormState extends State<_NotesForm> {
     try {
       final Map<String, dynamic> payload = {
         'exam': widget.exam,
-        'subject': _subjectCtrl.text.trim(),
+        'subject': widget.subject ?? _subjectCtrl.text.trim(),
         'topic': _topicCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
         'driveLink': _linkCtrl.text.trim(),
@@ -162,7 +165,7 @@ class _NotesFormState extends State<_NotesForm> {
       isLoading: _loading,
       onSave: _save,
       fields: [
-        AdminSheetField(controller: _subjectCtrl, label: 'Subject', icon: Icons.subject_rounded, hint: 'e.g. Maths'),
+        if (widget.subject == null) AdminSheetField(controller: _subjectCtrl, label: 'Subject', icon: Icons.subject_rounded, hint: 'e.g. Maths'),
         AdminSheetField(controller: _topicCtrl, label: 'Topic *', icon: Icons.topic_rounded, hint: 'e.g. Algebra'),
         AdminSheetField(controller: _descCtrl, label: 'Description', icon: Icons.info_outline_rounded, hint: 'Brief description', maxLines: 3),
         AdminSheetField(controller: _linkCtrl, label: 'Google Drive Link', icon: Icons.link_rounded, hint: 'https://drive.google.com/...'),

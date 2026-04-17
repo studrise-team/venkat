@@ -11,7 +11,11 @@ import '../aspirant/notes_view.dart';
 import 'my_attendance_view.dart';
 import 'my_progress_view.dart';
 import 'my_results_view.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../auth/profile_page.dart';
+import '../services/firebase_service.dart';
+import '../models/event_model.dart';
 
 // ---------------------------------------------------------------------------
 // Tab indices
@@ -61,46 +65,33 @@ class _StudentDashboardState extends State<StudentDashboard> {
   // ---------------------------------------------------------------------------
   // Home tab – quick-action grid
   // ---------------------------------------------------------------------------
-  static const _homeActions = [
-    {'label': 'AI Quiz', 'icon': Icons.auto_awesome_rounded, 'color': Color(0xFF6C63FF)},
-    {'label': 'Live Classes', 'icon': Icons.live_tv_rounded, 'color': Color(0xFFe040fb)},
-    {'label': 'Recorded Classes', 'icon': Icons.play_circle_fill_rounded, 'color': Color(0xFFf7971e)},
-    {'label': 'Material Links', 'icon': Icons.link_rounded, 'color': Color(0xFF38ef7d)},
-    {'label': 'My Attendance', 'icon': Icons.how_to_reg_rounded, 'color': Color(0xFF00D4AA)},
-    {'label': 'My Progress', 'icon': Icons.trending_up_rounded, 'color': Color(0xFF00B8D9)},
-    {'label': 'Quiz Results', 'icon': Icons.history_edu_rounded, 'color': Color(0xFFFF6B6B)},
-  ];
 
-  void _navigateFromHome(String action) {
+  void _navigateFromHome(String action, {String? subject}) {
     if (_user == null) return;
     final className = _user!.classContext ?? 'Class 10';
-
-    // Map certain home-grid taps to bottom-nav tabs for seamless UX
-    switch (action) {
-      case 'My Attendance':
-        setState(() => _currentTab = _Tab.attendance);
-        return;
-      case 'My Progress':
-        setState(() => _currentTab = _Tab.progress);
-        return;
-      case 'Quiz Results':
-        setState(() => _currentTab = _Tab.history);
-        return;
-    }
 
     Widget page;
     switch (action) {
       case 'AI Quiz':
-        page = QuizListView(exam: className, collection: 'daily_quizzes', title: 'AI Quizzes');
+        page = QuizListView(exam: className, subject: subject, collection: 'daily_quizzes', title: 'AI Quizzes');
         break;
       case 'Live Classes':
-        page = LiveClassView(exam: className);
+        page = LiveClassView(exam: className, subject: subject);
         break;
       case 'Recorded Classes':
-        page = VideoView(exam: className);
+        page = VideoView(exam: className, subject: subject);
         break;
       case 'Material Links':
-        page = NotesView(exam: className);
+        page = NotesView(exam: className, subject: subject);
+        break;
+      case 'My Attendance':
+        page = MyAttendanceView(className: className, studentName: _user!.name, subject: subject);
+        break;
+      case 'My Progress':
+        page = MyProgressView(className: className, studentName: _user!.name, subject: subject);
+        break;
+      case 'Quiz Results':
+        page = MyResultsView(className: className, studentId: _user!.uid, subject: subject);
         break;
       default:
         return;
@@ -191,11 +182,108 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 
-  Widget _buildActionCard(Map<String, Object> action, VoidCallback onTap) {
-    final color = action['color'] as Color;
+
+  // ---------------------------------------------------------------------------
+  // Tab body builders
+  // ---------------------------------------------------------------------------
+  void _showSubjectActions(String subjectName) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _SubjectActionSheet(
+        subject: subjectName,
+        onActionTap: (action) {
+          Navigator.pop(context);
+          _navigateFromHome(action, subject: subjectName);
+        },
+      ),
+    );
+  }
+
+  Widget _buildHomeTab() {
+    final className = _user?.classContext ?? 'General';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildBanner('Daily Learning',
+            'Access your classes, materials,\nand track your progress.',
+            Icons.auto_stories_rounded),
+        const SizedBox(height: 24),
+        
+        // Upcoming Events Carousel
+        _buildEventsSection(),
+        
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text('My Subjects',
+              style: GoogleFonts.outfit(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
+            stream: FirebaseService().getSubjects(className),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+              }
+              final docs = snapshot.data ?? [];
+              if (docs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.subject_rounded, color: AppColors.textMuted, size: 48),
+                      const SizedBox(height: 12),
+                      Text('No subjects found for $className',
+                          style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13)),
+                    ],
+                  ),
+                );
+              }
+              return GridView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                itemCount: docs.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.3,
+                ),
+                itemBuilder: (_, i) {
+                  final name = docs[i].data()['name'] ?? 'Untitled';
+                  return _buildSubjectCard(name);
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildSubjectCard(String name) {
+    // Generate a consistent color based on name
+    final colors = [
+      const Color(0xFF6C63FF),
+      const Color(0xFFe040fb),
+      const Color(0xFFf7971e),
+      const Color(0xFF38ef7d),
+      const Color(0xFF00D4AA),
+      const Color(0xFF00B8D9),
+      const Color(0xFFFF6B6B),
+    ];
+    final color = colors[name.hashCode % colors.length];
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _showSubjectActions(name),
       child: Container(
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(20),
@@ -205,66 +293,144 @@ class _StudentDashboardState extends State<StudentDashboard> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: Icon(action['icon'] as IconData, color: color, size: 28),
+              child: Icon(Icons.menu_book_rounded, color: color, size: 24),
             ),
-            const SizedBox(height: 12),
-            Text(action['label'] as String,
+            const SizedBox(height: 10),
+            Text(name,
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.outfit(
                     color: AppColors.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600)),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700)),
           ],
         ),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Tab body builders
-  // ---------------------------------------------------------------------------
-  Widget _buildHomeTab() {
+  Widget _buildEventsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildBanner('Daily Learning',
-            'Access your classes, materials,\nand track your progress.',
-            Icons.auto_stories_rounded),
-        const SizedBox(height: 24),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text('Quick Access',
-              style: GoogleFonts.outfit(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700)),
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: GridView.builder(
-              itemCount: _homeActions.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.1,
-              ),
-              itemBuilder: (_, i) {
-                final action = _homeActions[i];
-                return _buildActionCard(
-                    action,
-                    () => _navigateFromHome(action['label'] as String));
-              },
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('School Events',
+                  style: GoogleFonts.outfit(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700)),
+              Text('View all',
+                  style: GoogleFonts.outfit(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+            ],
           ),
         ),
         const SizedBox(height: 12),
+        SizedBox(
+          height: 180,
+          child: StreamBuilder<List<EventModel>>(
+            stream: FirebaseService().getEventsStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+              }
+              final events = snapshot.data ?? [];
+              if (events.isEmpty) {
+                return Center(
+                  child: Text('No upcoming events',
+                      style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13)),
+                );
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                scrollDirection: Axis.horizontal,
+                itemCount: events.length,
+                itemBuilder: (context, index) {
+                  final event = events[index];
+                  return _buildEventItem(event);
+                },
+              );
+            },
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildEventItem(EventModel event) {
+    return Container(
+      width: 280,
+      margin: const EdgeInsets.only(right: 16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 5,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              child: event.imageUrl != null
+                  ? Image.network(event.imageUrl!, width: double.infinity, fit: BoxFit.cover)
+                  : Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+                      child: const Icon(Icons.event_available_rounded, color: Colors.white, size: 40),
+                    ),
+            ),
+          ),
+          Expanded(
+            flex: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_rounded, size: 10, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text(DateFormat('MMM dd, yyyy').format(event.date),
+                          style: GoogleFonts.outfit(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(event.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text(event.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 11)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -402,6 +568,111 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SubjectActionSheet extends StatelessWidget {
+  final String subject;
+  final Function(String) onActionTap;
+
+  const _SubjectActionSheet({required this.subject, required this.onActionTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1A1A2E), // Match app theme
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 40, spreadRadius: 10)],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Subject Actions',
+                        style: GoogleFonts.outfit(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1)),
+                    Text(subject,
+                        style: GoogleFonts.outfit(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 0.9,
+            children: [
+              _ActionItem(label: 'AI Quiz', icon: Icons.auto_awesome_rounded, color: const Color(0xFF6C63FF), onTap: () => onActionTap('AI Quiz')),
+              _ActionItem(label: 'Live Class', icon: Icons.live_tv_rounded, color: const Color(0xFFe040fb), onTap: () => onActionTap('Live Classes')),
+              _ActionItem(label: 'Recorded', icon: Icons.play_circle_fill_rounded, color: const Color(0xFFf7971e), onTap: () => onActionTap('Recorded Classes')),
+              _ActionItem(label: 'Materials', icon: Icons.link_rounded, color: const Color(0xFF38ef7d), onTap: () => onActionTap('Material Links')),
+              _ActionItem(label: 'Attendance', icon: Icons.how_to_reg_rounded, color: const Color(0xFF00D4AA), onTap: () => onActionTap('My Attendance')),
+              _ActionItem(label: 'Progress', icon: Icons.trending_up_rounded, color: const Color(0xFF00B8D9), onTap: () => onActionTap('My Progress')),
+              _ActionItem(label: 'Results', icon: Icons.history_edu_rounded, color: const Color(0xFFFF6B6B), onTap: () => onActionTap('Quiz Results')),
+            ],
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionItem extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionItem({required this.label, required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+              border: Border.all(color: color.withValues(alpha: 0.2)),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(color: AppColors.textPrimary, fontSize: 11, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

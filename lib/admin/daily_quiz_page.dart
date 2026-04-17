@@ -8,7 +8,8 @@ import '../providers/quiz_provider.dart';
 
 class DailyQuizPage extends StatelessWidget {
   final String exam;
-  const DailyQuizPage({super.key, required this.exam});
+  final String? subject;
+  const DailyQuizPage({super.key, required this.exam, this.subject});
 
   Future<void> _deleteQuiz(BuildContext context, String quizId, String title) async {
     final ok = await showDialog<bool>(
@@ -33,7 +34,7 @@ class DailyQuizPage extends StatelessWidget {
   }
 
   void _addQuiz(BuildContext context) {
-    context.read<QuizProvider>().setExamContext(exam, collection: 'daily_quizzes');
+    context.read<QuizProvider>().setExamContext(exam, collection: 'daily_quizzes', subject: subject);
     context.read<QuizProvider>().reset();
     Navigator.pushNamed(context, '/upload');
   }
@@ -61,7 +62,8 @@ class DailyQuizPage extends StatelessWidget {
                         children: [
                           Text('Daily Quiz', style: GoogleFonts.outfit(
                               color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
-                          Text(exam, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
+                          Text(subject != null ? '$exam • $subject' : exam, 
+                              style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -83,7 +85,7 @@ class DailyQuizPage extends StatelessWidget {
 
               Expanded(
                 child: StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
-                  stream: FirebaseService().getQuizzesByExam(exam, collection: 'daily_quizzes'),
+                  stream: FirebaseService().getQuizzesByExam(exam, collection: 'daily_quizzes', subject: subject),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator(color: AppColors.primary));

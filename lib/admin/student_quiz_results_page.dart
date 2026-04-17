@@ -6,7 +6,8 @@ import '../services/firebase_service.dart';
 
 class StudentQuizResultsPage extends StatelessWidget {
   final String className;
-  const StudentQuizResultsPage({super.key, required this.className});
+  final String? subject;
+  const StudentQuizResultsPage({super.key, required this.className, this.subject});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +31,8 @@ class StudentQuizResultsPage extends StatelessWidget {
                         children: [
                           Text('Quiz Result History', style: GoogleFonts.outfit(
                               color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
-                          Text(className, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
+                          Text(subject != null ? '$className • $subject' : className, 
+                              style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -40,11 +42,15 @@ class StudentQuizResultsPage extends StatelessWidget {
               const SizedBox(height: 16),
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance
-                      .collection('student_quiz_results')
-                      .where('exam', isEqualTo: className)
-                      .orderBy('submittedAt', descending: true)
-                      .snapshots(),
+                  stream: (() {
+                    var query = FirebaseFirestore.instance
+                        .collection('student_quiz_results')
+                        .where('exam', isEqualTo: className);
+                    if (subject != null) {
+                      query = query.where('subject', isEqualTo: subject);
+                    }
+                    return query.orderBy('submittedAt', descending: true).snapshots();
+                  })(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator(color: AppColors.primary));

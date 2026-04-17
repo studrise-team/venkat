@@ -6,12 +6,14 @@ import '../services/firebase_service.dart';
 
 class NotesView extends StatelessWidget {
   final String exam;
-  const NotesView({super.key, required this.exam});
+  final String? subject;
+  const NotesView({super.key, required this.exam, this.subject});
 
   @override
   Widget build(BuildContext context) {
     return _ContentListView(
       exam: exam,
+      subject: subject,
       title: 'Notes',
       collection: 'notes',
       icon: Icons.note_rounded,
@@ -23,12 +25,14 @@ class NotesView extends StatelessWidget {
 
 class PaperView extends StatelessWidget {
   final String exam;
-  const PaperView({super.key, required this.exam});
+  final String? subject;
+  const PaperView({super.key, required this.exam, this.subject});
 
   @override
   Widget build(BuildContext context) {
     return _ContentListView(
       exam: exam,
+      subject: subject,
       title: 'Previous Papers',
       collection: 'previous_papers',
       icon: Icons.description_rounded,
@@ -40,12 +44,14 @@ class PaperView extends StatelessWidget {
 
 class CurrentAffairsView extends StatelessWidget {
   final String exam;
-  const CurrentAffairsView({super.key, required this.exam});
+  final String? subject;
+  const CurrentAffairsView({super.key, required this.exam, this.subject});
 
   @override
   Widget build(BuildContext context) {
     return _ContentListView(
       exam: exam,
+      subject: subject,
       title: 'Current Affairs',
       collection: 'current_affairs',
       icon: Icons.newspaper_rounded,
@@ -60,6 +66,7 @@ class CurrentAffairsView extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 class _ContentListView extends StatelessWidget {
   final String exam;
+  final String? subject;
   final String title;
   final String collection;
   final IconData icon;
@@ -68,6 +75,7 @@ class _ContentListView extends StatelessWidget {
 
   const _ContentListView({
     required this.exam,
+    this.subject,
     required this.title,
     required this.collection,
     required this.icon,
@@ -96,7 +104,7 @@ class _ContentListView extends StatelessWidget {
                       children: [
                         Text(title, style: GoogleFonts.outfit(
                             color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
-                        Text(exam, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
+                        Text(subject != null ? '$exam • $subject' : exam, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
                       ],
                     ),
                   ],
@@ -105,7 +113,7 @@ class _ContentListView extends StatelessWidget {
               const SizedBox(height: 16),
               Expanded(
                 child: StreamBuilder(
-                  stream: FirebaseService().getDocumentsByExam(collection, exam),
+                  stream: FirebaseService().getDocumentsByExam(collection, exam, subject: subject),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator(color: AppColors.primary));

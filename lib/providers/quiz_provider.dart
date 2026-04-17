@@ -27,12 +27,16 @@ class QuizProvider extends ChangeNotifier {
   String _currentExam = '';
   String get currentExam => _currentExam;
 
+  String? _currentSubject;
+  String? get currentSubject => _currentSubject;
+
   String _quizCollection = 'quizzes'; // 'quizzes' or 'daily_quizzes'
   String get quizCollection => _quizCollection;
 
-  void setExamContext(String exam, {String collection = 'quizzes'}) {
+  void setExamContext(String exam, {String collection = 'quizzes', String? subject}) {
     _currentExam = exam;
     _quizCollection = collection;
+    _currentSubject = subject;
     notifyListeners();
   }
 
@@ -105,6 +109,7 @@ class QuizProvider extends ChangeNotifier {
         _questions,
         exam: _currentExam,
         collection: _quizCollection,
+        subject: _currentSubject,
       );
       _savedQuizId = quizId;
       _currentQuizId = quizId;
@@ -230,6 +235,7 @@ class QuizProvider extends ChangeNotifier {
       answers: records,
       takenAt: DateTime.now(),
       examContext: _currentExam,
+      subjectContext: _currentSubject,
     );
     _state = QuizState.finished;
     notifyListeners();

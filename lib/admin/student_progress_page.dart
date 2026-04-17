@@ -6,17 +6,19 @@ import 'shared_widgets.dart';
 
 class StudentProgressPage extends StatelessWidget {
   final String className;
-  const StudentProgressPage({super.key, required this.className});
+  final String? subject;
+  const StudentProgressPage({super.key, required this.className, this.subject});
 
   @override
   Widget build(BuildContext context) {
     return AdminCrudPage(
       exam: className,
+      subject: subject,
       title: 'Student Progress',
       collection: 'student_progress',
       icon: Icons.trending_up_rounded,
       gradient: const LinearGradient(colors: [Color(0xFF38ef7d), Color(0xFF11998e)]),
-      formBuilder: (data, onSave) => _ProgressForm(className: className, data: data, onSave: onSave),
+      formBuilder: (data, onSave) => _ProgressForm(className: className, subject: subject, data: data, onSave: onSave),
       cardBuilder: (doc) => _ProgressCard(doc: doc),
     );
   }
@@ -99,9 +101,10 @@ class _ScoreIndicator extends StatelessWidget {
 
 class _ProgressForm extends StatefulWidget {
   final String className;
+  final String? subject;
   final Map<String, dynamic>? data;
   final VoidCallback onSave;
-  const _ProgressForm({required this.className, this.data, required this.onSave});
+  const _ProgressForm({required this.className, this.subject, this.data, required this.onSave});
 
   @override
   State<_ProgressForm> createState() => _ProgressFormState();
@@ -145,6 +148,7 @@ class _ProgressFormState extends State<_ProgressForm> {
     try {
       final payload = {
         'exam': widget.className,
+        'subject': widget.subject,
         'studentName': _nameCtrl.text.trim(),
         'term': _termCtrl.text.trim(),
         'math': _mathCtrl.text.trim(),

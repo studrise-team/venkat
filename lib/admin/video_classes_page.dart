@@ -6,12 +6,14 @@ import 'shared_widgets.dart';
 
 class VideoClassesPage extends StatelessWidget {
   final String exam;
-  const VideoClassesPage({super.key, required this.exam});
+  final String? subject;
+  const VideoClassesPage({super.key, required this.exam, this.subject});
 
   @override
   Widget build(BuildContext context) {
     return AdminCrudPage(
       exam: exam,
+      subject: subject,
       title: 'Video Classes',
       collection: 'video_classes',
       icon: Icons.play_circle_rounded,
@@ -21,7 +23,7 @@ class VideoClassesPage extends StatelessWidget {
         end: Alignment.bottomRight,
       ),
       formBuilder: (data, onSave) =>
-          _VideoForm(exam: exam, data: data, onSave: onSave),
+          _VideoForm(exam: exam, subject: subject, data: data, onSave: onSave),
       cardBuilder: (doc) => _VideoCard(doc: doc),
     );
   }
@@ -119,9 +121,10 @@ class _VideoCard extends StatelessWidget {
 
 class _VideoForm extends StatefulWidget {
   final String exam;
+  final String? subject;
   final Map<String, dynamic>? data;
   final VoidCallback onSave;
-  const _VideoForm({required this.exam, this.data, required this.onSave});
+  const _VideoForm({required this.exam, this.subject, this.data, required this.onSave});
 
   @override
   State<_VideoForm> createState() => _VideoFormState();
@@ -139,7 +142,7 @@ class _VideoFormState extends State<_VideoForm> {
   void initState() {
     super.initState();
     final d = widget.data;
-    _subjectCtrl = TextEditingController(text: d?['subject'] ?? '');
+    _subjectCtrl = TextEditingController(text: d?['subject'] ?? widget.subject ?? '');
     _topicCtrl = TextEditingController(text: d?['topic'] ?? '');
     _descCtrl = TextEditingController(text: d?['description'] ?? '');
     _linkCtrl = TextEditingController(text: d?['link'] ?? '');
@@ -167,7 +170,7 @@ class _VideoFormState extends State<_VideoForm> {
     try {
       final Map<String, dynamic> payload = {
         'exam': widget.exam,
-        'subject': _subjectCtrl.text.trim(),
+        'subject': widget.subject ?? _subjectCtrl.text.trim(),
         'topic': _topicCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
         'link': _linkCtrl.text.trim(),
@@ -226,8 +229,10 @@ class _VideoFormState extends State<_VideoForm> {
                     fontSize: 18,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 18),
-            AdminSheetField(controller: _subjectCtrl, label: 'Subject', icon: Icons.subject_rounded, hint: 'e.g. History'),
-            const SizedBox(height: 14),
+            if (widget.subject == null) ...[
+              AdminSheetField(controller: _subjectCtrl, label: 'Subject', icon: Icons.subject_rounded, hint: 'e.g. History'),
+              const SizedBox(height: 14),
+            ],
             AdminSheetField(controller: _topicCtrl, label: 'Topic *', icon: Icons.topic_rounded, hint: 'e.g. Maurya Empire'),
             const SizedBox(height: 14),
             AdminSheetField(controller: _descCtrl, label: 'Description', icon: Icons.info_outline_rounded, hint: 'Brief description', maxLines: 2),

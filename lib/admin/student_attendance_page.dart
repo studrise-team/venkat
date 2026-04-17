@@ -8,7 +8,8 @@ import 'shared_widgets.dart';
 
 class StudentAttendancePage extends StatefulWidget {
   final String className;
-  const StudentAttendancePage({super.key, required this.className});
+  final String? subject;
+  const StudentAttendancePage({super.key, required this.className, this.subject});
 
   @override
   State<StudentAttendancePage> createState() => _StudentAttendancePageState();
@@ -34,7 +35,8 @@ class _StudentAttendancePageState extends State<StudentAttendancePage> with Sing
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: Text('${widget.className} Attendance', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+        title: Text(widget.subject != null ? '${widget.className} - ${widget.subject}' : '${widget.className} Attendance', 
+            style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         bottom: TabBar(
@@ -53,9 +55,9 @@ class _StudentAttendancePageState extends State<StudentAttendancePage> with Sing
       body: TabBarView(
         controller: _tabController,
         children: [
-          _MarkAttendanceTab(className: widget.className),
-          _RecordsTab(className: widget.className),
-          _AttendanceAnalyticsTab(className: widget.className),
+          _MarkAttendanceTab(className: widget.className, subject: widget.subject),
+          _RecordsTab(className: widget.className, subject: widget.subject),
+          _AttendanceAnalyticsTab(className: widget.className, subject: widget.subject),
         ],
       ),
     );
@@ -68,7 +70,8 @@ class _StudentAttendancePageState extends State<StudentAttendancePage> with Sing
 
 class _MarkAttendanceTab extends StatefulWidget {
   final String className;
-  const _MarkAttendanceTab({required this.className});
+  final String? subject;
+  const _MarkAttendanceTab({required this.className, this.subject});
 
   @override
   State<_MarkAttendanceTab> createState() => _MarkAttendanceTabState();
@@ -76,7 +79,7 @@ class _MarkAttendanceTab extends StatefulWidget {
 
 class _MarkAttendanceTabState extends State<_MarkAttendanceTab> {
   DateTime _selectedDate = DateTime.now();
-  final _subjectCtrl = TextEditingController(text: 'General');
+  late final TextEditingController _subjectCtrl;
   List<Map<String, dynamic>> _students = [];
   Map<String, String> _statuses = {}; // studentId -> status
   bool _loading = true;
@@ -85,6 +88,7 @@ class _MarkAttendanceTabState extends State<_MarkAttendanceTab> {
   @override
   void initState() {
     super.initState();
+    _subjectCtrl = TextEditingController(text: widget.subject ?? 'General');
     _loadStudents();
   }
 
@@ -157,9 +161,10 @@ class _MarkAttendanceTabState extends State<_MarkAttendanceTab> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: AdminSheetField(controller: _subjectCtrl, label: 'Subject', icon: Icons.subject_rounded, hint: 'e.g. Mathematics'),
-                    ),
+                    if (widget.subject == null)
+                      Expanded(
+                        child: AdminSheetField(controller: _subjectCtrl, label: 'Subject', icon: Icons.subject_rounded, hint: 'e.g. Mathematics'),
+                      ),
                   ],
                 ),
               ],
@@ -218,12 +223,13 @@ class _MarkAttendanceTabState extends State<_MarkAttendanceTab> {
 
 class _RecordsTab extends StatelessWidget {
   final String className;
-  const _RecordsTab({required this.className});
+  final String? subject;
+  const _RecordsTab({required this.className, this.subject});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: FirebaseService().getAttendanceStream(className),
+      stream: FirebaseService().getAttendanceStream(className, subject: subject),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
         final records = snapshot.data ?? [];
@@ -337,12 +343,13 @@ class _EditAttendanceSheetState extends State<_EditAttendanceSheet> {
 
 class _AttendanceAnalyticsTab extends StatelessWidget {
   final String className;
-  const _AttendanceAnalyticsTab({required this.className});
+  final String? subject;
+  const _AttendanceAnalyticsTab({required this.className, this.subject});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: FirebaseService().getAttendanceStream(className),
+      stream: FirebaseService().getAttendanceStream(className, subject: subject),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
         final records = snapshot.data ?? [];

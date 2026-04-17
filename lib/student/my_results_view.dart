@@ -6,7 +6,8 @@ import '../app_theme.dart';
 class MyResultsView extends StatelessWidget {
   final String className;
   final String studentId;
-  const MyResultsView({super.key, required this.className, required this.studentId});
+  final String? subject;
+  const MyResultsView({super.key, required this.className, required this.studentId, this.subject});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +31,8 @@ class MyResultsView extends StatelessWidget {
                         children: [
                           Text('My Quiz Results', style: GoogleFonts.outfit(
                               color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
-                          Text(className, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
+                          Text(subject != null ? '$className • $subject' : className, 
+                              style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -40,12 +42,16 @@ class MyResultsView extends StatelessWidget {
               const SizedBox(height: 16),
               Expanded(
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance
-                      .collection('student_quiz_results')
-                      .where('exam', isEqualTo: className)
-                      .where('studentId', isEqualTo: studentId)
-                      .orderBy('submittedAt', descending: true)
-                      .snapshots(),
+                  stream: (() {
+                    var query = FirebaseFirestore.instance
+                        .collection('student_quiz_results')
+                        .where('exam', isEqualTo: className)
+                        .where('studentId', isEqualTo: studentId);
+                    if (subject != null) {
+                      query = query.where('subject', isEqualTo: subject);
+                    }
+                    return query.orderBy('submittedAt', descending: true).snapshots();
+                  })(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator(color: AppColors.primary));

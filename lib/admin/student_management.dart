@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
-import 'daily_quiz_page.dart';
-import 'live_class_page.dart';
-import 'video_classes_page.dart';
-import 'notes_page.dart';
-import 'student_attendance_page.dart';
-import 'student_progress_page.dart';
 import 'student_quiz_results_page.dart';
 import '../services/firebase_service.dart';
+import 'subject_page.dart';
+import 'manage_events_page.dart';
 
 class StudentManagementScreen extends StatefulWidget {
   const StudentManagementScreen({super.key});
@@ -23,73 +19,16 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     'Class 11', 'Class 12',
   ];
 
-  static const _actions = [
-    'AI Quiz / PDF to MCQs',
-    'Live Classes',
-    'Recorded Classes',
-    'Material Links',
-    'Attendance',
-    'Progress',
-    'Quiz Result History',
-  ];
-
   String? _selectedClass;
-  String? _selectedAction;
 
-  static const _actionIcons = <String, IconData>{
-    'AI Quiz / PDF to MCQs': Icons.auto_awesome_rounded,
-    'Live Classes': Icons.live_tv_rounded,
-    'Recorded Classes': Icons.play_circle_fill_rounded,
-    'Material Links': Icons.link_rounded,
-    'Attendance': Icons.how_to_reg_rounded,
-    'Progress': Icons.trending_up_rounded,
-    'Quiz Result History': Icons.history_edu_rounded,
-  };
-
-  void _navigate() {
-    if (_selectedClass == null || _selectedAction == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please select both Class and Action.', style: GoogleFonts.outfit()),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
-
-    final className = _selectedClass!;
-    final action = _selectedAction!;
-
-    Widget page;
-    switch (action) {
-      case 'AI Quiz / PDF to MCQs':
-        page = DailyQuizPage(exam: className);
-        break;
-      case 'Live Classes':
-        page = LiveClassPage(exam: className);
-        break;
-      case 'Recorded Classes':
-        page = VideoClassesPage(exam: className);
-        break;
-      case 'Material Links':
-        page = NotesPage(exam: className);
-        break;
-      case 'Attendance':
-        page = StudentAttendancePage(className: className);
-        break;
-      case 'Progress':
-        page = StudentProgressPage(className: className);
-        break;
-      case 'Quiz Result History':
-        page = StudentQuizResultsPage(className: className);
-        break;
-      default:
-        return;
-    }
-
-    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  void _onClassTapped(String className) {
+    setState(() => _selectedClass = className);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SubjectPage(className: className),
+      ),
+    );
   }
 
   @override
@@ -124,8 +63,8 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                             final total = snapshot.data?['studentCount'] ?? 0;
                             return Text(
                                 snapshot.connectionState == ConnectionState.waiting
-                                    ? 'Fetching registration data...'
-                                    : 'Select class and action • $total Registered',
+                                    ? 'Fetching data...'
+                                    : 'Select a class to manage subjects • $total Registered',
                                 style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12));
                           },
                         ),
@@ -175,7 +114,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                                   final count = breakdown[c] ?? 0;
                                   
                                   return GestureDetector(
-                                    onTap: () => setState(() => _selectedClass = c),
+                                    onTap: () => _onClassTapped(c),
                                     child: AnimatedContainer(
                                       duration: const Duration(milliseconds: 180),
                                       decoration: BoxDecoration(
@@ -230,10 +169,10 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                         }
                       ),
 
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 32),
 
-                      // Action Selection
-                      Text('Select Action',
+                      // Global Management
+                      Text('Global Management',
                           style: GoogleFonts.outfit(
                             color: AppColors.textSecondary,
                             fontSize: 13,
@@ -241,82 +180,18 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                             letterSpacing: 1,
                           )),
                       const SizedBox(height: 12),
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _actions.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) {
-                          final a = _actions[i];
-                          final selected = _selectedAction == a;
-                          return GestureDetector(
-                            onTap: () => setState(() => _selectedAction = a),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                              decoration: BoxDecoration(
-                                gradient: selected ? AppColors.accentGradient : null,
-                                color: selected ? null : AppColors.card,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: selected ? Colors.transparent : AppColors.cardBorder),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    _actionIcons[a] ?? Icons.chevron_right,
-                                    color: selected ? Colors.white : AppColors.accent,
-                                    size: 22,
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Text(a,
-                                      style: GoogleFonts.outfit(
-                                        color: selected ? Colors.white : AppColors.textPrimary,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      )),
-                                  const Spacer(),
-                                  if (selected) const Icon(Icons.check_rounded, color: Colors.white, size: 18),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Enter Button
-                      GestureDetector(
-                        onTap: _navigate,
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 17),
-                          decoration: BoxDecoration(
-                            gradient: AppColors.primaryGradient,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.4),
-                                blurRadius: 20,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 22),
-                              const SizedBox(width: 10),
-                              Text('Enter',
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  )),
-                            ],
-                          ),
+                      
+                      _ManagementCard(
+                        title: 'Manage Events',
+                        subtitle: 'Add pictures, descriptions and news common to all students.',
+                        icon: Icons.event_note_rounded,
+                        gradient: AppColors.primaryGradient,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ManageEventsPage()),
                         ),
                       ),
+                      
                       const SizedBox(height: 32),
                     ],
                   ),
@@ -324,6 +199,70 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ManagementCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final LinearGradient gradient;
+  final VoidCallback onTap;
+
+  const _ManagementCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: gradient,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: GoogleFonts.outfit(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      )),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: GoogleFonts.outfit(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      )),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 16),
+          ],
         ),
       ),
     );

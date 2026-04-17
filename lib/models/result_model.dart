@@ -7,6 +7,7 @@ class ResultModel {
   final DateTime takenAt;
 
   final String examContext;
+  final String? subjectContext;
 
   ResultModel({
     required this.totalQuestions,
@@ -16,6 +17,7 @@ class ResultModel {
     required this.answers,
     required this.takenAt,
     this.examContext = '',
+    this.subjectContext,
   });
 }
 
