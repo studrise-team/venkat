@@ -95,7 +95,10 @@ class QuizListView extends StatelessWidget {
                             onTap: () async {
                               final provider = context.read<QuizProvider>();
                               
-                              // Show generic loading if we don't want to rely solely on QuizScreen's loading state
+                              // IMPORTANT: Set context so results are saved with correct Exam/Subject tags
+                              provider.setExamContext(exam, collection: collection, subject: subject);
+
+                              // Show generic loading
                               showDialog(
                                 context: context,
                                 barrierDismissible: false,

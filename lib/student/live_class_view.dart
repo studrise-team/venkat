@@ -167,8 +167,10 @@ class _LiveCard extends StatelessWidget {
       ),
     );
   }
+
   void _handleTap(BuildContext context, Map<String, dynamic> doc, String url) {
     if (url.isEmpty) return;
+    
     // Attempt to extract video ID
     String? videoId = YoutubePlayer.convertUrlToId(url);
     
@@ -179,12 +181,6 @@ class _LiveCard extends StatelessWidget {
         if (parts.length > 1) {
           videoId = parts[1].split('?').first;
         }
-      }
-      if (url.contains('youtu.be/')) {
-         final parts = url.split('youtu.be/');
-         if (parts.length > 1) {
-           videoId = parts[1].split('?').first;
-         }
       }
     }
 
@@ -201,13 +197,15 @@ class _LiveCard extends StatelessWidget {
       );
       return;
     }
+    
+    // Fallback if not a YouTube link or ID extraction failed
     _launchUrl(url);
   }
-}
 
-Future<void> _launchUrl(String url) async {
-  final uri = Uri.tryParse(url);
-  if (uri != null && await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 }

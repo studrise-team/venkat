@@ -76,6 +76,8 @@ class QuizListScreen extends StatelessWidget {
                 title: title,
                 questionCount: qCount,
                 dateStr: dateStr,
+                exam: data['exam'] ?? '',
+                subject: data['subject'],
               );
             },
           );
@@ -175,6 +177,8 @@ class _QuizCard extends StatefulWidget {
   final String title;
   final int questionCount;
   final String dateStr;
+  final String exam;
+  final String? subject;
 
   const _QuizCard({
     required this.index,
@@ -182,6 +186,8 @@ class _QuizCard extends StatefulWidget {
     required this.title,
     required this.questionCount,
     required this.dateStr,
+    required this.exam,
+    this.subject,
   });
 
   @override
@@ -195,6 +201,7 @@ class _QuizCardState extends State<_QuizCard> {
     setState(() => _loading = true);
     try {
       final provider = context.read<QuizProvider>();
+      provider.setExamContext(widget.exam, subject: widget.subject);
       await provider.loadQuestionsFromFirestore(
           widget.quizId, widget.title);
       if (!mounted) return;

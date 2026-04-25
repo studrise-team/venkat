@@ -5,6 +5,7 @@ import 'student_quiz_results_page.dart';
 import '../services/firebase_service.dart';
 import 'subject_page.dart';
 import 'manage_events_page.dart';
+import 'class_options_page.dart';
 
 class StudentManagementScreen extends StatefulWidget {
   const StudentManagementScreen({super.key});
@@ -26,7 +27,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SubjectPage(className: className),
+        builder: (_) => ClassOptionsPage(className: className),
       ),
     );
   }
@@ -64,7 +65,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                             return Text(
                                 snapshot.connectionState == ConnectionState.waiting
                                     ? 'Fetching data...'
-                                    : 'Select a class to manage subjects • $total Registered',
+                                    : 'Select a class to manage progress and content • $total Registered',
                                 style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12));
                           },
                         ),

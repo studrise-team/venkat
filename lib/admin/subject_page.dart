@@ -24,22 +24,20 @@ class _SubjectPageState extends State<SubjectPage> {
   bool _isLoading = false;
 
   static const _actions = [
-    'AI Quiz / PDF to MCQs',
+    'Mock Test / PDF to MCQs',
     'Live Classes',
     'Recorded Classes',
     'Material Links',
     'Attendance',
-    'Progress',
     'Quiz Result History',
   ];
 
   static const _actionIcons = <String, IconData>{
-    'AI Quiz / PDF to MCQs': Icons.auto_awesome_rounded,
+    'Mock Test / PDF to MCQs': Icons.auto_awesome_rounded,
     'Live Classes': Icons.live_tv_rounded,
     'Recorded Classes': Icons.play_circle_fill_rounded,
     'Material Links': Icons.link_rounded,
     'Attendance': Icons.how_to_reg_rounded,
-    'Progress': Icons.trending_up_rounded,
     'Quiz Result History': Icons.history_edu_rounded,
   };
 
@@ -164,7 +162,7 @@ class _SubjectPageState extends State<SubjectPage> {
   void _navigateToContextualPage(String action, String subject) {
     Widget page;
     switch (action) {
-      case 'AI Quiz / PDF to MCQs':
+      case 'Mock Test / PDF to MCQs':
         page = DailyQuizPage(exam: widget.className, subject: subject);
         break;
       case 'Live Classes':
@@ -178,9 +176,6 @@ class _SubjectPageState extends State<SubjectPage> {
         break;
       case 'Attendance':
         page = StudentAttendancePage(className: widget.className, subject: subject);
-        break;
-      case 'Progress':
-        page = StudentProgressPage(className: widget.className, subject: subject);
         break;
       case 'Quiz Result History':
         page = StudentQuizResultsPage(className: widget.className, subject: subject);

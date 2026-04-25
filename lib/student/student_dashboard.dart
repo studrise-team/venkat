@@ -5,7 +5,7 @@ import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import '../widgets/logout_dialog.dart';
 import '../aspirant/quiz_list_view.dart';
-import '../aspirant/live_class_view.dart';
+import 'live_class_view.dart';
 import '../aspirant/video_view.dart';
 import '../aspirant/notes_view.dart';
 import 'my_attendance_view.dart';
@@ -77,8 +77,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
     Widget page;
     switch (action) {
-      case 'AI Quiz':
-        page = QuizListView(exam: className, subject: subject, collection: 'daily_quizzes', title: 'AI Quizzes');
+      case 'Mock Test':
+        page = QuizListView(exam: className, subject: subject, collection: 'daily_quizzes', title: 'Mock Tests');
         break;
       case 'Live Classes':
         page = LiveClassView(exam: className, subject: subject);
@@ -713,7 +713,7 @@ class _SubjectActionSheet extends StatelessWidget {
             crossAxisSpacing: 16,
             childAspectRatio: 0.9,
             children: [
-              _ActionItem(label: 'AI Quiz', icon: Icons.auto_awesome_rounded, color: const Color(0xFF6C63FF), onTap: () => onActionTap('AI Quiz')),
+              _ActionItem(label: 'Mock Test', icon: Icons.auto_awesome_rounded, color: const Color(0xFF6C63FF), onTap: () => onActionTap('Mock Test')),
               _ActionItem(label: 'Live Class', icon: Icons.live_tv_rounded, color: const Color(0xFFe040fb), onTap: () => onActionTap('Live Classes')),
               _ActionItem(label: 'Recorded', icon: Icons.play_circle_fill_rounded, color: const Color(0xFFf7971e), onTap: () => onActionTap('Recorded Classes')),
               _ActionItem(label: 'Materials', icon: Icons.link_rounded, color: const Color(0xFF38ef7d), onTap: () => onActionTap('Material Links')),

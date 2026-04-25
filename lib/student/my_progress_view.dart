@@ -78,6 +78,8 @@ class MyProgressView extends StatelessWidget {
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (_, i) {
                         final data = docs[i].data();
+                        final Map<String, dynamic> scores = data['scores'] ?? {};
+                        
                         return Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
@@ -96,14 +98,23 @@ class MyProgressView extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _ScoreItem(label: 'Math', score: data['math'] ?? '-'),
-                                  _ScoreItem(label: 'Science', score: data['science'] ?? '-'),
-                                  _ScoreItem(label: 'English', score: data['english'] ?? '-'),
-                                ],
-                              ),
+                              
+                              if (scores.isNotEmpty)
+                                Wrap(
+                                  spacing: 20,
+                                  runSpacing: 16,
+                                  children: scores.entries.map((e) => _ScoreItem(label: e.key, score: e.value.toString())).toList(),
+                                )
+                              else
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _ScoreItem(label: 'Math', score: data['math'] ?? '-'),
+                                    _ScoreItem(label: 'Science', score: data['science'] ?? '-'),
+                                    _ScoreItem(label: 'English', score: data['english'] ?? '-'),
+                                  ],
+                                ),
+
                               if (data['remarks'] != null && data['remarks'].toString().isNotEmpty) ...[
                                 const SizedBox(height: 16),
                                 Container(

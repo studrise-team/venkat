@@ -172,13 +172,16 @@ class FirebaseService {
   }
 
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> getDocumentsByExam(
-      String collection, String exam, {String? subject}) {
+      String collection, String exam, {String? subject, String? studentName}) {
     Query<Map<String, dynamic>> query = _firestore
         .collection(collection)
         .where('exam', isEqualTo: exam);
     
     if (subject != null) {
       query = query.where('subject', isEqualTo: subject);
+    }
+    if (studentName != null) {
+      query = query.where('studentName', isEqualTo: studentName);
     }
 
     return query.snapshots()

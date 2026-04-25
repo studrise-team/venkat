@@ -214,7 +214,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         icon: Icons.school_rounded,
         gradient: AppColors.accentGradient,
         title: 'School Students',
-        subtitle: 'Class 1-12: AI Quizzes, Live Classes, Attendance, Progress',
+        subtitle: 'Class 1-12: Mock Tests, Live Classes, Attendance, Progress',
         info: studentCount != null ? '$studentCount Registered' : null,
         onTap: () => Navigator.pushNamed(context, '/student-management'),
       ),

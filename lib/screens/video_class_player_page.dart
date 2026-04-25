@@ -36,7 +36,26 @@ class _VideoClassPlayerPageState extends State<VideoClassPlayerPage> {
 
   String _getVideoId(Map<String, dynamic> doc) {
     final url = doc['link'] ?? doc['youtubeLink'] ?? '';
-    return YoutubePlayer.convertUrlToId(url) ?? '';
+    if (url.isEmpty) return '';
+    
+    String? videoId = YoutubePlayer.convertUrlToId(url);
+    if (videoId == null || videoId.isEmpty) {
+      // Check for /live/ links
+      if (url.contains('/live/')) {
+        final parts = url.split('/live/');
+        if (parts.length > 1) {
+          return parts[1].split('?').first.trim();
+        }
+      }
+      // Check for short links or other formats that might have query params after ID
+      if (url.contains('youtu.be/')) {
+         final parts = url.split('youtu.be/');
+         if (parts.length > 1) {
+           return parts[1].split('?').first.trim();
+         }
+      }
+    }
+    return videoId ?? '';
   }
 
   void _initPlayer(String videoId) {
@@ -143,7 +162,7 @@ class _VideoClassPlayerPageState extends State<VideoClassPlayerPage> {
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'Recorded Classes',
+              widget.collection == 'live_classes' ? 'Live Classes' : 'Recorded Classes',
               style: GoogleFonts.outfit(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,

@@ -61,6 +61,7 @@ void showAdminSnackBar(
 class AdminCrudPage extends StatelessWidget {
   final String exam;
   final String? subject;
+  final String? studentName;
   final String title;
   final String collection;
   final IconData icon;
@@ -72,6 +73,7 @@ class AdminCrudPage extends StatelessWidget {
     super.key,
     required this.exam,
     this.subject,
+    this.studentName,
     required this.title,
     required this.collection,
     required this.icon,
@@ -144,7 +146,7 @@ class AdminCrudPage extends StatelessWidget {
                                   color: AppColors.textPrimary,
                                   fontSize: 20,
                                   fontWeight: FontWeight.w700)),
-                          Text(subject != null ? '$exam • $subject' : exam,
+                          Text(studentName != null ? '$exam • $studentName' : (subject != null ? '$exam • $subject' : exam),
                               style: GoogleFonts.outfit(
                                   color: AppColors.textSecondary, fontSize: 12)),
                         ],
@@ -168,7 +170,7 @@ class AdminCrudPage extends StatelessWidget {
               Expanded(
                 child: StreamBuilder(
                   stream:
-                      FirebaseService().getDocumentsByExam(collection, exam, subject: subject),
+                      FirebaseService().getDocumentsByExam(collection, exam, subject: subject, studentName: studentName),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
@@ -387,6 +389,7 @@ class AdminSheetField extends StatelessWidget {
   final IconData icon;
   final String hint;
   final int maxLines;
+  final bool readOnly;
 
   const AdminSheetField({
     super.key,
@@ -395,6 +398,7 @@ class AdminSheetField extends StatelessWidget {
     required this.icon,
     required this.hint,
     this.maxLines = 1,
+    this.readOnly = false,
   });
 
   @override
@@ -402,6 +406,7 @@ class AdminSheetField extends StatelessWidget {
     return TextField(
       controller: controller,
       maxLines: maxLines,
+      readOnly: readOnly,
       style: GoogleFonts.outfit(color: AppColors.textPrimary),
       decoration: InputDecoration(
         labelText: label,

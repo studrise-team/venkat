@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          'AI Quiz',
+                          'Mock Test',
                           style: GoogleFonts.outfit(
                             color: AppColors.textPrimary,
                             fontSize: 22,
